@@ -1,0 +1,376 @@
+<!DOCTYPE HTML>
+<!-- <html lang="en-US"> -->
+<html lang="en-US" class="fade">
+<!-- 
+  ^ a class of "fade" makes slides fade smoothly into one another
+ -->
+<!-- <html lang="en-US" class="nonumbers"> -->
+<!-- 
+  If you want no numbers on the slides add a "nonumbers" class 
+  to the HTML element.
+  Adding a class of "fade" will make slides fade into another. 
+-->
+<head>
+  <meta charset="UTF-8">
+  <title>Recover Instructions</title>
+<!-- 
+  If you upload your slides to the web, ensure that you have 
+  a good title - this shows up in search results and social
+  media links
+ -->
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="themes/mozilla/styles/style.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>Recover Instructions</h1>
+    <p class="footer">
+      Nicolas B. Pierron [:nbp]
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong>
+       Recover instructions are a mean to extend our bailout vocabulary such as we
+       can open new class of optimizations which are currently out side the
+       scope of IonMonkey.
+    </p>
+  </aside>
+
+  <div id="cover" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2>Recover Instructions</h2>
+      </header>
+      <img src="pictures/ION_MONKEY800.jpg" 
+           class="middle shadow" height="400"
+           alt="IonMonkey poster">
+      <small class="byline">
+        Nicolas B. Pierron [:nbp]<br>
+        JS Team Meetup 2014
+      </small>
+      <footer class="notes">
+        This presentation is dedicated to IonMonkey.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="originalMotivation" class="slide shout"><div>
+    <section>
+      <header>
+        <h2>Let's Implement some Crazy Optimizations</h2>
+      </header>
+      <footer class="notes">
+        In my mind after looking at PDF.js on December 2012.
+        Need for escape analysis.
+        Let's do it.
+      </footer>
+    </section>
+  </div></div>  
+
+  <div id="presentationPlan" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Optimizing JIT principles & Bailouts.</li>
+        <li>Current Optimizations.</li>
+        <li>Improving Bailouts with Recover Instructions.</li>
+        <li>Overview of Possible Optimizations.</li>
+      </ol>
+      <footer class="notes">
+        Let's go back first and review what is IonMonkey.
+        Then we will look at the what we might want to do.
+        After I will present what are Recover Instructions.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="cfg" class="slide"><div>
+    <section>
+      <header>
+        <h2>Control Flow Graph</h2>
+      </header>
+      <img src="pictures/cfg-only.svg" class="myM" alt="Control Flow Graph">
+      <footer class="notes">
+        At first we take the bytecode and generate a control flow graph.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="cfg-guards" class="slide"><div>
+    <section>
+      <header>
+        <h2>Optimizing with Guards</h2>
+      </header>
+      <img src="pictures/cfg-guards.svg" class="myM">
+      <footer class="notes">
+        But to be able to optimize these operations we have to guard that we
+        optimize for what is used.  So we guard for the type of objects, and
+        that operations still behave as expected (no overflow).
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="cfg-osi" class="slide"><div>
+    <section>
+      <header>
+        <h2>Optimizing with Assumptions</h2>
+      </header>
+      <img src="pictures/cfg-guards-osi.svg" class="myM">
+      <footer class="notes">
+        As guards are costly, we make assumptions to remove the guards from the
+        compiled to, and replace them by assumption.  These assumptions have no
+        associated code, all the code remain in other the guards. When these
+        other guards are failing, we are invalidating the code.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="cfg-bailout-src" class="slide"><div>
+    <section>
+      <header>
+        <h2>Optimizing with Assumptions</h2>
+      </header>
+      <img src="pictures/cfg-bailout-src.svg" class="myM">
+      <footer class="notes">
+        These assumptions have no associated code, all the code remain in other
+        the guards. When these other guards are failing, we are invalidating the
+        code.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="cfg-bailout" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bailouts</h2>
+      </header>
+      <img src="pictures/cfg-bailout.svg" class="myM">
+      <footer class="notes">
+        When a guard or an assumption is failing we have to go back to a generic
+        mode of execution.  To do so we use bailouts, which are converting the
+        optimized frames of IonMonkey to a non-optimized frame of the baseline
+        compiler.
+
+        Baseline is not making any assumption about the code and it should
+        handle all cases.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="cfg-resume-points-idea" class="slide"><div>
+    <section>
+      <header>
+        <h2>Resume Points</h2>
+      </header>
+      <img src="pictures/cfg-resume-points-idea.svg" class="myM">
+      <footer class="notes">
+        When we bailout we resume the execution on resume points.  Each resume
+        point captures the layout of the frame of the generic execution, such as
+        we can reconstruct it.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="cfg-resume-points-def" class="slide"><div>
+    <section>
+      <header>
+        <h2>Resume Points</h2>
+      </header>
+      <img src="pictures/cfg-resume-points-def.svg" class="myM">
+      <footer class="notes">
+        Resume points are constructed when we build the optimized graph. They
+        are expressed in terms of the result of the instruction of the optimized
+        graph.
+
+        Also, we have a lot of resume points.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="resume-points-details" class="slide"><div>
+    <section>
+      <header>
+        <h2>Resume Points</h2>
+      </header>
+      <img src="pictures/cfg-resume-points-details.svg" class="myM">
+      <footer class="notes">
+        On the MIR, resume points are making a mirror of what the baseline stack
+        looks like.  The difference is that baseline stack frames are
+        represented with Values inside, where Resume Points are represented with
+        the result of the evaluation of MIR instruction which would be generated.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="snapshot" class="slide"><div>
+    <section>
+      <header>
+        <h2>Snapshots</h2>
+      </header>
+      <img src="pictures/cfg-snapshot.svg" class="myM">
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="snapshot-build" class="slide"><div>
+    <section>
+      <header>
+        <h2>Building Snapshots</h2>
+      </header>
+      <img src="pictures/cfg-snapshot-build.svg" class="myM">
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="curr-optim-uce" class="slide"><div>
+    <section>
+      <header>
+        <h2>UCE</h2>
+      </header>
+      <pre>
+        <code>if (predicate() /* proved false */)</code>
+        <code>  /* remove code */</code>
+        <code>…</code>
+      </pre>
+      <p>Unreachable Code Elimination, remove unused branches.</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="curr-optim-inline" class="slide"><div>
+    <section>
+      <header>
+        <h2>Inlining</h2>
+      </header>
+      <pre>
+        <code>var failed = function (i) {</code>
+        <code>  if (i > 9997)</code>
+        <code>    failed = function (i) { return true; } </code>
+        <code>  return false; </code>
+        <code>}</code>
+      </pre>
+      <pre>
+        <code>  if (failed(i) || failed(i))</code>
+        <code>    /* Inlining → Removed by UCE */</code>
+      </pre>
+      <p>Cause invalidation on scripts inlining this function.</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="curr-optim-ra" class="slide"><div>
+    <section>
+      <header>
+        <h2>Range Analysis</h2>
+      </header>
+      <pre>
+        <code>function ra(i) {</code>
+        <code>  var x = (-1 >> 1) + 308641 * i;</code>
+        <code>  //  ^ Computed with int32s.</code>
+        <code>  failed(i); failed(i);</code>
+        <code>  </code>
+        <code>  print(x | 0);</code>
+        <code>}</code>
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="curr-optim-uce-ra-example" class="slide"><div>
+    <section>
+      <header>
+        <h2>UCE → Range Analysis Failure</h2>
+      </header>
+      <pre>
+        <code>function ra(i) {</code>
+        <code>  var x = (-1 >> 1) + 308641 * i;</code>
+        <code>  //  ^ Computed with doubles.</code>
+        <code>  if (failed(i) || failed(i))</code>
+        <code>    return; /* print(x); */</code>
+        <code>  print(x | 0);</code>
+        <code>}</code>
+      </pre>
+      <p>UCE prevents Range Analysis optimizations.</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="bailout-limit" class="slide"><div>
+    <section>
+      <header>
+        <h2>Limited by Bailouts</h2>
+      </header>
+      <img src="pictures/cfg-snapshot-build.svg" class="myM">
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="recover-idea" class="slide"><div>
+    <section>
+      <header>
+        <h2>Recover Idea</h2>
+      </header>
+      <img src="pictures/cfg-recover-idea.svg" class="myM">
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="recover-instruction-rp" class="slide"><div>
+    <section>
+      <header>
+        <h2>Recover Instructions</h2>
+      </header>
+      <img src="pictures/cfg-recover-instruction-rp.svg" class="myM">
+      <footer class="notes">
+        Store the old operations as part of the resume point, while optimizing
+        with the truncated one.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="recover-instruction-build" class="slide"><div>
+    <section>
+      <header>
+        <h2>Recover Instructions Build</h2>
+      </header>
+      <img src="pictures/cfg-recover-instruction-build.svg" class="myM">
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="remove-writes" class="slide"><div>
+    <section>
+      <header>
+        <h2>Optim: Removing Writes</h2>
+      </header>
+      <p>Removing writes is just about adding write instructions to the list of
+      recover instructions.</p>
+      <p>→ Implies precise alias analysis.</p>
+      <p>→ Needed Escape analysis.</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
