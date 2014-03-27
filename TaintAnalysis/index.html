@@ -1,0 +1,633 @@
+<!DOCTYPE HTML>
+<!-- <html lang="en-US"> -->
+<html lang="en-US" class="fade">
+<!-- 
+  ^ a class of "fade" makes slides fade smoothly into one another
+ -->
+<!-- <html lang="en-US" class="nonumbers"> -->
+<!-- 
+  If you want no numbers on the slides add a "nonumbers" class 
+  to the HTML element.
+  Adding a class of "fade" will make slides fade into another. 
+-->
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic /Taint/ Analysis</title>
+<!-- 
+  If you upload your slides to the web, ensure that you have 
+  a good title - this shows up in search results and social
+  media links
+ -->
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="themes/mozilla/styles/style.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>Dynamic <i>Taint</i> Analysis</h1>
+    <p class="footer">
+      Nicolas B. Pierron [:nbp]
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong>
+       Dynamic <i>Taint</i> Analysis is a tool for checking security issue at
+       runtime. As the web is becoming a central point for developing
+       applications, developers are looking for ways to improve the security of
+       their web pages.  As developer of the JavaScript engines, we need to find
+       a solution for helping them while competing against other browsers.
+    </p>
+  </aside>
+
+  <div id="cover" class="slide cover w"><div>
+    <section>
+      <header>
+        <h2>Dynamic <i>Taint</i> Analysis</h2>
+      </header>
+      <img src="pictures/Taint_dump-cropped.png" alt="Taint dump">
+      <small class="byline">
+        Nicolas B. Pierron [:nbp]<br>
+        JS Team Meetup 2014
+      </small>
+      <footer class="notes">
+        Hi,
+
+        ###  Tainting == Flow  ###
+        Tainting is an analysis made for following where the
+        information is flowing the in a program.  This can be used to ensure
+        that no private data are leaked, or that no foreign data can corrupt the
+        state of a program.
+
+        ###  Screenshot: Color == Origin  ###
+        The Dynamic aspect of Taint analysis means
+        that we do such analysis based on one run of the program.  In this
+        screenshot (minemu.org), we can literally see the taint of the data
+        based on their origins.
+
+        ###  Dynamic? Fuzzing  ###
+        Dynamic tainting is an interesting approach for web pages.
+        This can be used to guards that data are not flowing in parts of the
+        code where they are not supposed to flow into.  Combined with fuzzing
+        approaches, this can find bugs in Web pages (or Firefox OS
+        applications).
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="simple-example" class="slide"><div>
+    <section>
+      <header>
+        <h2>All about origin &amp; flow</h2>
+      </header>
+        <pre>
+          <code>var pwd = $('#password').val();</code>
+          <code> </code>
+          <code>xhr("/msg/" + pwd);</code>
+        </pre>
+      <footer class="notes">
+        This is a tiny example to highlight what tainting can do.
+
+        In this example, we are reading the content of the password field, and
+        call a page with the content of the input field.
+
+        In such case, I guess the fact that I wrote 'password', is hurting you
+        as being something bad, because we see that the password is leaking into
+        a clear text channel.
+
+        A tainting analysis should report such errors.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="simple-example-fixed" class="slide"><div>
+    <section>
+      <header>
+        <h2>All about origin &amp; flow</h2>
+      </header>
+        <pre>
+          <code>var pwd = $('#password').val();</code>
+          <code>var hash = hasher(challenge, pwd);</code>
+          <code>xhr("/msg/?hash=" + hash);</code>
+        </pre>
+      <footer class="notes">
+        Ok, now it is fixed.  So we should not expect any messsage to be
+        reported by the tainting.
+
+        But, wait why would a tainting analysis stop reporting issues in such
+        cases?  It should continue to report issues after all the password is
+        used in the computation of the hash, in a similar way as it was used in
+        the computation of the string which is given to XmlHttpRequest.  Or it
+        might stop reporting if the taint is kept on a subset of the URL, in
+        which case we can detect that the server will not look for any random
+        page.
+
+        What we see, is that in any cases these analysis need some
+        instrumentation to taint data of primitive functions (DOM and JS) and
+        warn about the tainting of some input.  And at last being able to
+        customize this list to prevent false positives, such as this "hasher"
+        function.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="dyn" class="slide"><div>
+    <section>
+      <header>
+        <h2>Dynamic Analysis</h2>
+      </header>
+        <pre>
+          <code>var url;</code>
+          <code>var pwd = $('#password').val();</code>
+          <code>if (predicate(pwd))</code>
+          <code>  url = "/msg/" + pwd;</code>
+          <code>else</code>
+          <code>  url = "/msg/?hash=" + hasher(challenge, pwd);</code>
+          <code>xhr(url);</code>
+        </pre>
+      <footer class="notes">
+        In case of static taint analysis, this code will report as one of the
+        path includes the fault of the first example.  But in case of dynamic
+        taint analysis, this code might not report anything in many runs.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="2proposals" class="slide"><div>
+    <section>
+      <header>
+        <h2>2 Proposals</h2>
+      </header>
+      <ol>
+        <li>DOMinator</li>
+        <li>no-name-yet?</li>
+      </ol>
+      <footer class="notes">
+        So far, I saw 2 proposal made by different teams of implementations of
+        dynamic taint analysis in SpiderMonkey.
+
+        The first one is 'DOMinator', which started as a rewrite of Firefox 3.6
+        and got recently updated by Ivan (which updated last year).
+
+        The second one has no-name-yet, AFAIK.  And they do not want to go
+        public before they make their publication.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="dominator-concept" class="slide"><div>
+    <section>
+      <header>
+        <h2>DOM<span style="text-transform: lowercase">inator</span></h2>
+      </header>
+      <small class="byline">
+        Ivan Alagenchev, (Mark Goodwin)
+      </small>
+      <p>Taint <strong>String</strong> only:</p>
+      <ul>
+        <li>Use lengthAndFlags field to taint Strings.</li>
+        <li>Instrument string manipulations.</li>
+      </ul>
+      <footer class="notes">
+        DOMinator, is only tainting the Strings, by reusing the bit fields that
+        we have in JSStrings.  When the taint flag is set, they know that the
+        string is tainted and know that they can find more information in a
+        hash-table (if I remember correctly).
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="dominator-eval" class="slide"><div>
+    <section>
+      <header>
+        <h2>DOM<span style="text-transform: lowercase">inator</span></h2>
+      </header>
+      <p>Pros:</p>
+      <ul>
+        <li>Little performance impact, when disabled (?)</li>
+      </ul>
+      <p>Cons:</p>
+      <ul>
+        <li>Correctness issues. (JSON.parse)</li>
+        <li>Invasive instrumentation.</li>
+      </ul>
+      <footer class="notes">
+        The problem of looking only at Strings, is that it is really easy to
+        break out-side the scope of this analysis.  A simple example is
+        JSON.parse, where we would expect to also taint the object.  A more
+        recent example would be AsmJS code, as we are switching from ArrayBuffer
+        to Strings.
+
+        Also, if there is a tainting issue, it would have to be done in the
+        JavaScript engine, where it is implemented.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="no-name-yet-concept" class="slide"><div>
+    <section>
+      <header>
+        <h2>no-name-yet</h2>
+      </header>
+      <small class="byline">(a research team somewhere on Earth)</small>
+      <p>Taint all Values:</p>
+      <ul>
+        <li>Box all doubles.</li>
+        <li>Use the ValueTag and object flags for tainting.</li>
+        <li>Instrument all operations.</li>
+      </ul>
+      <footer class="notes">
+        The second proposal is taking a turn compared to DOMintator, which is
+        that they are tainting all Values.  To do so they needed some bits on
+        the JSValueTag, so they boxed the double.
+
+        I guess you all know what this means for Kraken and Octane benchmarks.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="no-name-yet-eval" class="slide"><div>
+    <section>
+      <header>
+        <h2>no-name-yet</h2>
+      </header>
+      <p>Pros:</p>
+      <ul>
+        <li>??</li>
+      </ul>
+      <p>Cons:</p>
+      <ul>
+        <li>Terrible performance overall.</li>
+        <li>Invasive instrumentation.</li>
+      </ul>
+      <footer class="notes">
+        The problem of boxing all doubles, is that we are going to have terrible
+        performances.
+
+        In addition, this modification would be extremelly invasive in the
+        engine, and especially in the Jit.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="invasive" class="slide"><div>
+    <section>
+      <header>
+        <h2>Invasive</h2>
+      </header>
+      <img src="pictures/space-invader.svg" class="right" style="top:50%">
+      <ul>
+        <li>Spread (one implementation) around the code base.</li>
+        <li>Maintained by all JS developers.</li>
+        <li>We are not security engineers.</li>
+      </ul>
+      <p>Can we do better?</p>
+      <footer class="notes">
+        Ok, we have quickly review the two proposals.  One of the thing that I
+        dislike the most with these approaches, is that by accepting these, we
+        commit our-self as JS Engine developpers to maintain these pieces of
+        code.
+
+        We are the right person to ask when we are dealing with performances,
+        but are we the right persons to decide about the correctness level that
+        are acceptable?
+
+        There is always trade-off between the execution time and the correctness
+        of the analysis, don't we want to leave this choice to our users?
+
+        So, can we do better?
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="jalangi-concept" class="slide"><div>
+    <section>
+      <header>
+        <h2>Other: Jalangi</h2>
+      </header>
+      <small class="byline">
+        Koushik Sen,
+        seen
+        on <a href="https://air.mozilla.org/test-and-cure-your-javascript-blues-with-jalangi/">Air
+        Mozilla</a>, as and <a href="https://www.eecs.berkeley.edu/~gongliang13/jalangi_ff/">Addon</a>
+      </small>
+      <p>Dynamic analysis <strong>framework</strong>:</p>
+      <ul>
+        <li>Rewrite JavaScript code.</li>
+        <li>Instrument with function calls.</li>
+        <li>Not restricted to Taint analysis.</li>
+      </ul>
+      <footer class="notes">
+        Before answering, I want to stop on a third approach.
+
+        Jalangi is a dynamic analysis framework for JavaScript, this means that
+        it is not limited to taint analysis.  In addition, of working on top of
+        Chromium and Firefox (as an addon), they offer the ability to user to
+        instrument their builds with custom analysis scripts.
+
+        As this is a framework, they tried record-replay on Sunspider as well as
+        5 webapp written for Tizen.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="jalangi-emulate" class="slide"><div>
+    <section>
+      <header>
+        <h2>Jalangi Hooks</h2>
+      </header>
+      <p>Dynamic <strong>analysis?</strong> framework:</p>
+      <p>Rewrite the code and <strong>emulate</strong> the operators</p>
+      <pre class="left">
+        <code>var y = …;</code>
+        <code>function f(x) {</code>
+        <code>  return x + y;</code>
+        <code>}</code>
+      </pre>
+      <pre class="right">
+        <code>var y = …;</code>
+        <code>function f(x) {</code>
+        <code>  return Binary('+', x, y);</code>
+        <code>}</code>
+      </pre>
+      <footer class="notes">
+        Jalangi works by pre-processing the JavaScript code.  This means that
+        they are rewriting a "+" to be a function call which takes both argument
+        and the operator.
+
+        This implies that they are emulating JavaScript semantics.  Emulating
+        JavaScript is error prone.  So qualifying this framework to be an
+        analysis framework is like adding a mental barrier to every analysis
+        developers.
+
+        Also, this add a non-neglectable performance overhead, as we have to
+        make a function call in-place of '+' operator and loose all type
+        information that we could have collected on the script.  Without
+        mentionning that this Binary function would trivally become Megamorphic.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="jalangi-boxing" class="slide"><div>
+    <section>
+      <header>
+        <h2>Jalangi Boxing</h2>
+      </header>
+      <p>Dynamic <strong>analysis?</strong> framework:</p>
+      <p>Emulate the code and <strong>box &amp; unbox</strong> values</p>
+      <pre>
+        <code>function Binary(op, x, y) {</code>
+        <code>  if (op == "+")</code>
+        <code>    return box(unbox(x) + unbox(y),</code>
+        <code>               tainted(x) | tainted(y));</code>
+        <code>  …</code>
+        <code>}</code>
+      </pre>
+      <footer class="notes">
+        When we are doing analysis, we are collecting informations about the
+        script location, the values and so on.  Jalangi analysis has 2 things to
+        do, first collecting information, such as the taint, then doing the
+        emulation.
+
+        The information collected about values is stored on a shadow object,
+        which contains the information about the value, it is then 'unbox' for
+        emulating the operation, and the result is 'boxed' with the taint
+        information.
+
+        Analyzed values are manipulated in the same compartment as the
+        observer.  This might cause more correctness errors in the
+        implementation of analysis.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="jalangi-eval" class="slide"><div>
+    <section>
+      <header>
+        <h2>Jalangi</h2>
+      </header>
+      <p>Pros:</p>
+      <ul>
+        <li>Externalize analysis logic.</li>
+      </ul>
+      <p>Cons:</p>
+      <ul>
+        <li>Correctness issues. (emulate JavaScript)</li>
+        <li>Additional Parser.</li>
+        <li>Bad performance during analysis.</li>
+      </ul>
+      <footer class="notes">
+        Jalangi has taken an interesting approach, and I think this is the best
+        of all so far.  It removes the logic from the JS engine and leave it to
+        persons who are specialized in their domain.
+
+        But persons from another domain, such as security engineer for taint
+        analysis, might not be JavaScript engine developers, and getting the
+        semantics right is error prone.
+
+        Also using a different parser implies that you are restricting your self
+        to the common sub-set of both parsers (running w & w/o analysis).  And
+        it is unlikely to support experimental features as SpiderMonkey might be
+        doing.
+
+        One of the thing suggested with Jalangi is that there is a
+        non-neglectable overhead (> ~15x while recording on
+        sunspider benchmark).  This can be understood as it is emulating the
+        JavaScript with megamorphique functions called from every locations.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="better-qm" class="slide shout"><div>
+    <section>
+      <header>
+        <h2>Can We Do Better?</h2>
+      </header>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="proposal-instrumentation" class="slide"><div>
+    <section>
+      <header>
+        <h2>Proposal: Instrumentation</h2>
+      </header>
+      <!-- <p>Pros: Externalize analysis logic, Cons: <strong>Emulate</strong>
+      JavaScript.</p> -->
+      <pre class="right">
+        <code>function f(x) {</code>
+        <code>  return x + y;</code>
+        <code>}</code>
+      </pre>
+      <p><i>Bytecode</i> (overview) of</p>
+      <pre>
+        <code>function f(x) {</code>
+        <code>  let _x = x, _y = y;</code>
+        <code>  let _ctx = %probe.getContext();</code>
+        <code>  %probe.Plus(_x, _y, _ctx);</code>
+        <code>  let _r = _x + _y;</code>
+        <code>  %probe.PlusResult(_r, _ctx);</code>
+        <code>  return _r;</code>
+        <code>}</code>
+      </pre>
+      <footer class="notes">
+        Ok, let's come back to the previous example.
+
+        In the previous example Jalangi was replacing the source by something
+        else, adding another parser, emulating JavaScript and breaking type
+        informations.
+
+        What I suggests, is to avoid making an additional parser, by customizing
+        the generated bytecode to monitor values.
+
+        Note that instead of making a generic probe, we should make them
+        specific.  One trivial example is monitoring the type of addition
+        operands, where there is no need for checking the Substraction operator.
+
+        Then instead of emulating the JavaScript semantics, we just observe
+        values around the operation, and use a context to brace the
+        operations.
+
+        Also, having probes instead of an emulation, gives us the ability to run
+        the Plus and PlusResult probe offline (asynchronously) as long as we
+        keep the values around, thus keeping a minimal runtime overhead if
+        wanted.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="proposal-compartment" class="slide"><div>
+    <section>
+      <header>
+        <h2>Proposal: Compartement</h2>
+      </header>
+      <!-- <p>Pros: Externalize analysis logic, Cons: <strong>Emulate</strong>
+      JavaScript.</p> -->
+      <pre>
+        <code>function Plus(x, y, ctx) {</code>
+        <code>  ctx.taint = tainted(x) | tainted(y);</code>
+        <code>}</code>
+        <code>function PlusResult(res, ctx) {</code>
+        <code>  return setTaint(res, ctx.taint);</code>
+        <code>}</code>
+      </pre>
+      <p>Proxies → Shadow object by default, no more plain values.</p>
+      <footer class="notes">
+        By moving the probe to an analysis compartment, we remove all the boxing
+        & unboxing overhead.  This becomes part of the API that all arguments
+        are proxies over the content.
+
+        This improve the analysis code as it does not have to emulate
+        JavaScript.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="proposal-impl" class="slide"><div>
+    <section>
+      <header>
+        <h2>Proposal: Implementation</h2>
+      </header>
+      <!-- <p>Cons: Re-implement a Parser, Cons: Invasive instrumentation.</p> -->
+      <pre>
+        <code>typedef bool (*EmitFuncProto)(ExclusiveContext *cx,</code>
+        <code>                               BytecodeEmitter *bce,</code>
+        <code>                               ParseNode *pn);</code>
+      </pre>
+      <pre>
+        <code>static bool</code>
+        <code>EmitFuncWithProbes(ExclusiveContext *cx,</code>
+        <code>                   BytecodeEmitter *bce,</code>
+        <code>                   ParseNode *pn)</code>
+        <code>{</code>
+        <code>  … // Wrap and delegate.</code>
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="proposal-impl-subclass" class="slide"><div>
+    <section>
+      <header>
+        <h2>Proposal: Implementation</h2>
+      </header>
+      <!-- <p>Cons: Re-implement a Parser, Cons: Invasive instrumentation.</p> -->
+      <pre>
+        <code>class BytecodeEmitter</code>
+        <code>{</code>
+        <code>    EmitFuncProto EmitFunc_;</code>
+      </pre>
+      <pre>
+        <code>// Initialization of the BytecodeEmitter</code>
+        <code>if (hasFuncProbes()) {</code>
+        <code>  EmitFunc_ = EmitFuncWithProbes;</code>
+      </pre>
+      <p>→ Cons: performance impact (?), when not used.</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="proposal-eval" class="slide"><div>
+    <section>
+      <header>
+        <h2>Proposal</h2>
+      </header>
+      <p>Pros:</p>
+      <ul>
+        <li>Incremental support of operations.</li>
+        <li>Externalize analysis logic.</li>
+        <li>Potentially run offline.</li>
+        <li>Boxed by default.</li>
+      </ul>
+      <p>Cons:</p>
+      <ul>
+        <li>?</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>  
+
+  <div id="proposal-eval" class="slide"><div>
+    <section>
+      <header>
+        <h2>External analysis example</h2>
+      </header>
+      <p>Pros:</p>
+      <ul>
+        <li>Record & replay.</li>
+        <li>Tracking origin of null / undefined.</li>
+        <li>Type-checking of Plus operators.</li>
+        <li>Boxed by default.</li>
+      </ul>
+      <p>Cons:</p>
+      <ul>
+        <li>?</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>  
+
+  <div id="lets-start" class="slide oneline"><div>
+    <section>
+      <header>
+        <h2>When do we Start?</h2>
+      </header>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>

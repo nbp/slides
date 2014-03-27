@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:osb="http://www.openswatchbook.org/uri/2009/osb"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   width="219.60086"
+   height="159.60086"
+   id="svg2"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="space-invader.svg">
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1036"
+     id="namedview3194"
+     showgrid="false"
+     inkscape:zoom="0.70710678"
+     inkscape:cx="174.33365"
+     inkscape:cy="95.797207"
+     inkscape:window-x="-3"
+     inkscape:window-y="-3"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient4089"
+       osb:paint="gradient">
+      <stop
+         style=""
+         offset="0"
+         id="stop4091" />
+      <stop
+         style=""
+         offset="1"
+         id="stop4093" />
+    </linearGradient>
+  </defs>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     transform="translate(-0.19956911,-0.5617511)">
+    <path
+       d="m 40.126998,0.5617511 0,19.9501109 19.963715,0 0,-19.9501109 -19.963715,0 z m 19.963715,19.9501109 0,19.9501 -19.963715,0 0,19.95011 -19.963714,0 0,19.95011 -19.96371489,0 0,59.850318 19.96371489,0 0,-39.90021 19.963714,0 0,39.90021 19.963715,0 0,-19.95011 99.818577,0 0,19.95011 19.96371,0 0,-39.90021 19.96372,0 0,39.90021 19.96371,0 0,-59.850318 -19.96371,0 0,-19.95011 -19.96372,0 0,-19.95011 -19.96371,0 0,-19.9501 -19.96372,0 0,19.9501 -59.891142,0 0,-19.9501 -19.963715,0 z m 99.818577,0 19.96371,0 0,-19.9501109 -19.96371,0 0,19.9501109 z m 0,119.700638 -39.92743,0 0,19.95011 39.92743,0 0,-19.95011 z m -99.818577,0 0,19.95011 39.927427,0 0,-19.95011 -39.927427,0 z m 0,-79.800428 19.963715,0 0,19.95011 -19.963715,0 0,-19.95011 z m 79.854857,0 19.96372,0 0,19.95011 -19.96372,0 0,-19.95011 z"
+       id="path5543"
+       inkscape:connector-curvature="0"
+       style="fill:#000000;fill-opacity:0.2359882" />
+  </g>
+</svg>
