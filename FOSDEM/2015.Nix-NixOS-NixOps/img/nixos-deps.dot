@@ -1,0 +1,41 @@
+digraph G { bgcolor="transparent";
+
+"/nix/store/hl67c5fpac7v45rsviw5bp23cdf0ilg9-system-path" [label="system-path", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/msz913camsfigd1833g54p7w42h8vgns-initrd" [label="initrd", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/w0ml58bivg2jyczpjm66rl3c7vklnbkj-linux-3.14.27" [label="linux-3.14.27", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/h0v77f8jrcb16rwv4nnz19cnl3v6n8x1-nix.conf" [label="nix.conf", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/ilf7i62f6l04jj0wf30krhv04sgkv4yk-ssh_config" [label="ssh_config", shape = box, style = filled, fillcolor = "#ffffff"];
+
+
+"/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead2" [label = "nixos-14.12 (27/01/2015)", shape = box, style = filled, fillcolor = "#88ff88"];
+"/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafk-etc" [label = "etc", shape = box, style = filled, fillcolor = "#88ff88"];
+"/nix/store/vpcwnc6b51ndhkzdss282l27l96l9nxz-httpd.conf" [label="httpd.conf", shape = box, style = filled, fillcolor = "#88ff88"];
+"/nix/store/f9nr84g44823ixnk7ra535lynrnnh55r-unit-httpd.service" [label="httpd.service", shape = box, style = filled, fillcolor = "#88ff88"];
+
+"/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafk-etc" -> "/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead2" [color = "green"];
+"/nix/store/hl67c5fpac7v45rsviw5bp23cdf0ilg9-system-path" -> "/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead2" [color = "red"];
+"/nix/store/msz913camsfigd1833g54p7w42h8vgns-initrd" -> "/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead2" [color = "blue"];
+"/nix/store/w0ml58bivg2jyczpjm66rl3c7vklnbkj-linux-3.14.27" -> "/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead2" [color = "magenta"];
+
+"/nix/store/f9nr84g44823ixnk7ra535lynrnnh55r-unit-httpd.service" -> "/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafk-etc" [color = "red"];
+"/nix/store/h0v77f8jrcb16rwv4nnz19cnl3v6n8x1-nix.conf" -> "/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafk-etc" [color = "burlywood"];
+"/nix/store/ilf7i62f6l04jj0wf30krhv04sgkv4yk-ssh_config" -> "/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafk-etc" [color = "blue"];
+"/nix/store/vpcwnc6b51ndhkzdss282l27l96l9nxz-httpd.conf" -> "/nix/store/f9nr84g44823ixnk7ra535lynrnnh55r-unit-httpd.service" [color = "magenta"];
+
+
+"/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead3" [label = "nixos-14.12 (28/01/2015)", shape = box, style = filled, fillcolor = "#8888ff"];
+"/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafi-etc" [label = "etc", shape = box, style = filled, fillcolor = "#8888ff"];
+"/nix/store/vpcwnc6b51ndhkzdss282l27l96l9nxa-httpd.conf" [label="httpd.conf", shape = box, style = filled, fillcolor = "#8888ff"];
+"/nix/store/f9nr84g44823ixnk7ra535lynrnnh55a-unit-httpd.service" [label="httpd.service", shape = box, style = filled, fillcolor = "#8888ff"];
+
+"/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafi-etc" -> "/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead3" [color = "green"];
+"/nix/store/hl67c5fpac7v45rsviw5bp23cdf0ilg9-system-path" -> "/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead3" [color = "red"];
+"/nix/store/msz913camsfigd1833g54p7w42h8vgns-initrd" -> "/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead3" [color = "blue"];
+"/nix/store/w0ml58bivg2jyczpjm66rl3c7vklnbkj-linux-3.14.27" -> "/nix/store/ww898i6akgb0wmz1fd15kg7zdg7r5wv5-nixos-14.12.231.139ead3" [color = "magenta"];
+
+"/nix/store/f9nr84g44823ixnk7ra535lynrnnh55a-unit-httpd.service" -> "/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafi-etc" [color = "red"];
+"/nix/store/h0v77f8jrcb16rwv4nnz19cnl3v6n8x1-nix.conf" -> "/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafi-etc" [color = "burlywood"];
+"/nix/store/ilf7i62f6l04jj0wf30krhv04sgkv4yk-ssh_config" -> "/nix/store/9qw73074zbkn5hhkb9zn021rwaxdyafi-etc" [color = "blue"];
+"/nix/store/vpcwnc6b51ndhkzdss282l27l96l9nxa-httpd.conf" -> "/nix/store/f9nr84g44823ixnk7ra535lynrnnh55a-unit-httpd.service" [color = "magenta"];
+
+}

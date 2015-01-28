@@ -1,0 +1,64 @@
+digraph G { rankdir=LR; bgcolor="transparent";
+//        ratio=1.3333;
+
+subgraph cluster_src {
+
+"/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [label = "python-2.7.9.drv", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/13gnii6g05c1p5ixf22la1fqwd9nbjv5-bzip2-1.0.6.drv" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "black"];
+"/nix/store/3m5zq1f38mdk51ks25hz8pnl99hq6j5k-glibc-2.20.drv" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "red"];
+"/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "green"];
+//"/nix/store/cfk04ans56xql9l6waqhqzzd60g9rzxi-search-path.patch" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "blue"];
+//"/nix/store/dfyfzha1vnab8kfnxi99v9ikfdfnpm7k-deterministic-build.patch" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "magenta"];
+"/nix/store/dvwxmfrlm8ffcy3yp0q6p96cy9h30h1w-stdenv.drv" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "burlywood"];
+//"/nix/store/dxscwf37hgq0xafs54h0c8xx47vg6d5g-nix-store-mtime.patch" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "black"];
+"/nix/store/gxyihp1gmhxd70b5fccgzw32gbx5zw1r-bash-4.3-p30.drv" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "red"];
+"/nix/store/jwimr2d5xlbhicl42k9qvyqggcacqk66-zlib-1.2.8.drv" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "green"];
+"/nix/store/lv2cxjhwxfs2srl1gl1bfx3wcyyqxgnh-Python-2.7.9.tar.xz.drv" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "blue"];
+//"/nix/store/r1hv4qbvhxczjp5qv4zar964qh64kv7r-setup-hook.sh" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "magenta"];
+"/nix/store/y3yhyfzcwxdsczh0nics4dfgbqs8p21s-openssl-1.0.1k.drv" -> "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" [color = "burlywood"];
+
+"/nix/store/13gnii6g05c1p5ixf22la1fqwd9nbjv5-bzip2-1.0.6.drv" [label = "bzip2-1.0.6.drv", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/3m5zq1f38mdk51ks25hz8pnl99hq6j5k-glibc-2.20.drv" [label = "glibc-2.20.drv", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh" [label = "default-builder.sh", shape = box, style = filled, fillcolor = "#ffffff"];
+//"/nix/store/cfk04ans56xql9l6waqhqzzd60g9rzxi-search-path.patch" [label = "search-path.patch", shape = box, style = filled, fillcolor = "#ffffff"];
+//"/nix/store/dfyfzha1vnab8kfnxi99v9ikfdfnpm7k-deterministic-build.patch" [label = "deterministic-build.patch", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/dvwxmfrlm8ffcy3yp0q6p96cy9h30h1w-stdenv.drv" [label = "stdenv.drv", shape = box, style = filled, fillcolor = "#ffffff"];
+//"/nix/store/dxscwf37hgq0xafs54h0c8xx47vg6d5g-nix-store-mtime.patch" [label = "nix-store-mtime.patch", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/gxyihp1gmhxd70b5fccgzw32gbx5zw1r-bash-4.3-p30.drv" [label = "bash-4.3-p30.drv", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/jwimr2d5xlbhicl42k9qvyqggcacqk66-zlib-1.2.8.drv" [label = "zlib-1.2.8.drv", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/lv2cxjhwxfs2srl1gl1bfx3wcyyqxgnh-Python-2.7.9.tar.xz.drv" [label = "Python-2.7.9.tar.xz.drv", shape = box, style = filled, fillcolor = "#ffffff"];
+//"/nix/store/r1hv4qbvhxczjp5qv4zar964qh64kv7r-setup-hook.sh" [label = "setup-hook.sh", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/y3yhyfzcwxdsczh0nics4dfgbqs8p21s-openssl-1.0.1k.drv" [label = "openssl-1.0.1k.drv", shape = box, style = filled, fillcolor = "#ffffff"];
+
+}
+
+subgraph cluster_bin {
+
+"/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [label = "python-2.7.9", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "black"];
+"/nix/store/96vfgc1gfwslmg3hhfzkxsvqqc61mh89-bzip2-1.0.6" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "red"];
+"/nix/store/a2p5i9hb5hpqssh7vp402r6n9slfayqx-zlib-1.2.8" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "green"];
+"/nix/store/cxrc12hkmvrjlq747cm08av6jl41nzi1-bash-4.3-p30" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "blue"];
+"/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "magenta"];
+"/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "burlywood"];
+
+"/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k" [label = "openssl-1.0.1k", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/96vfgc1gfwslmg3hhfzkxsvqqc61mh89-bzip2-1.0.6" [label = "bzip2-1.0.6", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/a2p5i9hb5hpqssh7vp402r6n9slfayqx-zlib-1.2.8" [label = "zlib-1.2.8", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/cxrc12hkmvrjlq747cm08av6jl41nzi1-bash-4.3-p30" [label = "bash-4.3-p30", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23" [label = "coreutils-8.23", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" [label = "glibc-2.20", shape = box, style = filled, fillcolor = "#ffffff"];
+
+}
+
+// layout properly
+{
+        "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" -> "/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k" [style = invis];
+        "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" -> "/nix/store/96vfgc1gfwslmg3hhfzkxsvqqc61mh89-bzip2-1.0.6" [style = invis];
+        "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" -> "/nix/store/a2p5i9hb5hpqssh7vp402r6n9slfayqx-zlib-1.2.8" [style = invis];
+        "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" -> "/nix/store/cxrc12hkmvrjlq747cm08av6jl41nzi1-bash-4.3-p30" [style = invis];
+        "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" -> "/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23" [style = invis];
+        "/nix/store/xygg3wqnxdi8v3xhk3ks57kdsxlri2l8-python-2.7.9.drv" -> "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" [style = invis];
+}
+
+}

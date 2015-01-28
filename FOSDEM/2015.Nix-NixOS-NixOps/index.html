@@ -1,0 +1,1150 @@
+<!DOCTYPE HTML>
+<html lang="en-US" class="fade">
+<head>
+  <meta charset="UTF-8">
+  <title>Nix-NixOS-NixOps: From Development to Deployment</title>
+
+<!--
+Submission notes
+
+By focusing only on specific Nix features, this talk aims to appeal to
+a wide public:
+ - Developers: to isolate their development work from the system.
+ - DevOps: to test and deploy networks of computers to virtual
+machines / the cloud.
+ - Linux users: to manage their system configuration in a declarative manner.
+ - Package management developers: to learn from and possibly adopt
+ideas from Nix.
+
+Abstract
+
+Nix is a package manager that provides side-by-side installation of
+multiple versions of a package, multi-user package management and easy
+setup of build environments.  This talk highlights how simple features
+of a package manager can change the way components are developed and
+deployed.  We will investigate how Nix works and demonstrate how to
+use it throughout the development life-cycle.  We will create a
+development environment, configure a system service, deploy to a
+container for testing and finally deploy a remote system.
+
+Full Description
+
+* Package management:
+ - Issues: Correctness, Completeness, Interference.
+ - Deployment: Source vs. Binary.
+
+* Nix
+ - Isolation: Hashing build inputs.
+ - Making build environment.
+ - Demo: Building a package.
+ - Source & Binary deployment.
+
+* NixOS
+ - Configuration implies Installation.
+ - Configuration management & Abstraction.
+ - Demo: Generate configuration files around a service.
+
+* NixOps
+ - Provisioning a configuration.
+ - Demo: Testing deployment.
+-->
+
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>Nix-NixOS-NixOps: From Development to Deployment</h1>
+    <p class="footer">
+      Nicolas B. Pierron
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong>
+
+Nix is a package manager that provides side-by-side installation of
+multiple versions of a package, multi-user package management and easy
+setup of build environments.  This talk highlights how simple features
+of a package manager can change the way components are developed and
+deployed.  We will investigate how Nix works and demonstrate how to
+use it throughout the development cycle.  We will create a
+development environment, configure a system service, deploy to a
+container for testing and finally deploy a remote system.
+
+    </p>
+  </aside>
+
+
+  <div id="cover" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2 style="text-align: center;">Nix, NixOS, NixOps<br>Benefits of Isolation</h2>
+      </header>
+      <img src="img/dscf0313.jpg"
+           class="middle shadow" width="100%" height="100%"
+           alt="">
+      <small class="byline">
+        Nicolas B. Pierron<br>
+        NixOS developer, FOSDEM 2015
+      </small>
+      <footer class="notes">
+
+        This presentation is dedicated at showing that a few features of a
+        package manager can make a suite of tools which are better than any
+        container-based system.
+
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="presentation-introduction" class="slide"><div>
+    <section>
+      <header>
+        <h2>Benefits of Isolation</h2>
+      </header>
+      <p><strong>Goal</strong>:</p>
+      <ol>
+        <li>Highlights benefits of package isolation.</li>
+        <li>Makes you promote isolation to your package manager.</li>
+        <li>Makes you experiment with Nix, NixOS, and NixOps</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="presentation-pmi-isolation" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li class="current">Package Manager issues
+          <ol>
+            <li class="current">Coherency &amp; Isolation</li>
+            <li>Source vs. Binary</li>
+          </ol>
+        </li>
+        <li>Nix, Developer Friendly</li> <!-- Find better titles -->
+        <li>NixOS, Abstract Configuration</li>
+        <li>NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+    <div id="package-manager-basis" class="slide"><div>
+      <section>
+        <header>
+          <h2>Package Manager knowledge</h2>
+        </header>
+  
+        <!-- Find a simplified acyclic directed-graph image to represent the dependencies of a component. -->
+        <img src="img/python-deps.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+Here is what a package manager knows, it know that one package depends on
+another, and thus, if you want to install python then you have to install
+openssl.
+
+This knowledge is basically an acyclic directed graph, where one package depends on other, or sub-parts of others.  The goal of package manager is to make sure this graph is complete, and that when a  user performs an install then the installation is consistent.
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="fhs-bin-lib" class="slide"><div>
+      <section>
+        <header>
+          <h2>Filesystem Hierarchy Standard (FHS)</h2>
+        </header>
+  
+          <!-- <p style="margin: 0px;">Software/Users can predict the location of installed files and directories.</p> -->
+
+<pre class="manpage">A typical Linux system has, among others, the following directories:
+
+       <i>/bin</i>   This directory contains executable programs which are needed
+              in single user mode and to bring the system up or repair it.
+
+       <i>/lib</i>   This directory should hold those shared libraries that are
+              necessary to boot the system and to run the commands in the
+              root filesystem.
+</pre>
+
+        <footer class="notes">
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="fhs-flatten-graph" class="slide"><div>
+      <section>
+        <header>
+          <h2>Filesystem Hierarchy Standard (FHS)</h2>
+        </header>
+  
+        <img src="img/python-deps-fhs.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+So basically the FHS looks like this once your packages are installed.  You
+know that they are all in the same column.
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="fhs-graph-patched" class="slide"><div>
+      <section>
+        <header>
+          <h2>Filesystem Hierarchy Standard (FHS)</h2>
+        </header>
+  
+        <img src="img/python-deps-fhs-patched.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+The good thing seems to be that once you have known location where you add your software, then everything becomes easier. The question then becomes, what the hell is this thing when we ask the package manager again?
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="package-manager-patched" class="slide"><div>
+      <section>
+        <header>
+          <h2>Package Manager knowledge</h2>
+        </header>
+  
+        <img src="img/python-deps-patched.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+So, what if this not-managed software is just using perl?  Then this package is using a software that we did not intent to use / install.  This means that if persons responsible of OpenSSL decide to remove the dependency on perl, then updating python will break this not-manager software due to the removal of perl.
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="package-manager-removed" class="slide"><div>
+      <section>
+        <header>
+          <h2>Package Manager lack-knowledge</h2>
+        </header>
+  
+        <img src="img/python-deps-patched-update.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+So, we update python, and its modified dependencies where OpenSSL no longer depends on perl.  This means that our package which is not-managed by the package manager is no longer able to run because it depends on a dependency which is not required by the user of the system.
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="package-manager-isolation" class="slide"><div>
+      <section>
+        <header>
+          <h2>Package Manager Isolation</h2>
+        </header>
+  
+        <img src="img/python-deps-isolation.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+So one question we might ask, is why did we accept this situation in the first place? Why did we allowed the not-managed package to use software which were not installed explicitly, but implementation details of the package and package manager.
+
+So, what would happen if we were to only install python and none of its dependencies in a standard location, and hide the rest of the dependencies in a non-standard location which cannot be used by package such as the not-managed package?  This way the user would have to explicit "perl" as being one of the package that he has to install.
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="fhs-graph-hidden" class="slide"><div>
+      <section>
+        <header>
+          <h2>FHS + hidden (non-standard) path</h2>
+        </header>
+  
+        <img src="img/python-deps-fhs-isolation.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+By adding isolation, the not-managed package would not have found perl, because it is installed in a location which is not standard.
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="fhs-graph-hidden-fixed" class="slide"><div>
+      <section>
+        <header>
+          <h2>FHS + hidden (non-standard) path</h2>
+        </header>
+  
+        <img src="img/python-deps-fhs-isolation-fixed.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+Adding such isolation benefit the user in 2 ways, he has to install precisely all the dependencies, and the not-managed package provide has to explicit what they depends on, based on the feedback of users.
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="user-env-hidden" class="slide"><div>
+      <section>
+        <header>
+          <h2>User Environment + hidden path</h2>
+        </header>
+  
+        <img src="img/python-deps-nix-user-env.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+What makes the left column standard?  We could have multiple directory which are made-up environment containing only a visible set of software.  We could even imagine that a user can manage this kind of environment, and even manage multiple one.
+
+What you see on this graph is almost what Nix do, we have packages which are stored isolated from each others, and we are making views which are including a specific set of installed packages.
+
+The interesting part, is that a user can build such environments for him-self. I will not go deeper in the specific of Nix implementation, nor how Nix ensure that a user can build packages.
+
+        </footer>
+      </section>
+    </div></div>
+
+  <div id="presentation-pmi-source" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li class="current">Package Manager issues
+          <ol>
+            <li>Coherency &amp; Isolation</li>
+            <li class="current">Source vs. Binary</li>
+          </ol>
+        </li>
+        <li>Nix, Developer Friendly</li>
+        <li>NixOS, Abstract Configuration</li>
+        <li>NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+    <div id="pm-source-binary" class="slide"><div>
+      <section>
+        <header>
+          <h2>Source vs. Binary Packages</h2>
+        </header>
+  
+        <img src="img/python-src-deps.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+In terms of graph, both are about managing dependencies, one manage the build time dependencies while the other manages the runtime dependencies.  If you have no environment dependent look-up for programs, then the list of source dependencies is a super set of the runtime dependencies.
+
+Source tarballs for building python: 324 MB
+Uncompressed binary for installing python: 121 MB (excluding 54 MB for perl, and 89 MB for gcc)
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="fhs-source-sucks" class="slide"><div>
+      <section>
+        <header>
+          <h2>FHS, source distribution sucks!</h2>
+        </header>
+  
+        <img src="img/python-deps-fhs.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+One of the biggest issue of source-based package manager, is the lack of knowledge of the runtime dependencies.  Basically, this means that any build dependencies will remain visible to all users even after installing packages.
+
+Fortunately, this is a problem which can be solved by adding isolation between packages, and by scanning isolated packages for references to other isolated packages.  This is a process identical to a Garbage Collector in a managed language such as python, where the garbage collector looks for pointers to other allocated memory regions. (:TODO: make a slide for that?)
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="customization-binary-sucks" class="slide"><div>
+      <section>
+        <header>
+          <h2>Customization, binary distribution sucks!</h2>
+        </header>
+  
+        <!-- :TODO: Find something to put here -->
+        <img src="img/python-multiple.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+One of the biggest issue of binary package managers, is the lack of possibility to install software which are incompatible from each others.  For example, having a dependency on one version of python instead of another one, implies that you have to torture the FHS to make all versions works concurrently to each others.
+
+Also note that this is an isolation issue, if you were to install each version in isolation for each others, then you would not have to suffix binaries with version numbers.
+
+Apparently, python developers noticed and partially solved this issue for them-self by introducing a tool which give you the ability to work in an isolated user environment. So why can't Linux distribution catch-up on these?
+
+        </footer>
+      </section>
+    </div></div>
+
+  <div id="presentation-nix-intro" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Package Manager issues
+        <li class="current">Nix, Developer Friendly
+          <ol>
+            <li class="current">Introduction</li>
+            <li>Customize packages</li>
+            <li>Building Environments</li>
+          </ol>
+        </li>
+        <li>NixOS, Abstract Configuration</li>
+        <li>NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+
+Now I made my point!  You are all depressed, you realized that the package manager you have been relying on during all these years is lacking this *one* feature.
+
+Before you go request that you want isolation and user-environments in your package manager, … I should make you even more depressed by demonstrating how such feature would be useful in your day-to-day work.
+
+      </footer>
+    </section>
+  </div></div>
+
+    <div id="nix-daemon" class="slide"><div>
+      <section>
+        <header>
+          <h2>Nix Daemon</h2>
+        </header>
+  
+        <ul>
+          <li>Build for the user</li>
+          <li>Store in isolation</li>
+          <li>Independent of the package manager
+            <ul>
+              <li>Backend of the Nix language</li>
+              <li>Backend of Guix (Scheme)</li>
+            </ul>
+          </li>
+        </ul>
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+<!--
+    <div id="nix-language-attrset" class="slide"><div>
+      <section>
+        <header>
+          <h2>Nix language - attribute set</h2>
+        </header>
+  
+<p><pre><code>let
+  attrset = {
+    int = 1;
+    str = "string";
+    bool = true;
+  };
+in
+  attrset.int
+</code></pre></p>
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="nix-language-fun" class="slide"><div>
+      <section>
+        <header>
+          <h2>Nix language - function</h2>
+        </header>
+  
+<p><pre><code>let
+  f = g: x:
+    g x;
+in
+  f (x: x) 3
+</code></pre></p>
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+-->
+
+    <div id="nix-language-drv" class="slide"><div>
+      <section>
+        <header>
+          <h2>Nix language - derivation</h2>
+        </header>
+  
+<p><pre><code>derivation {
+  name = "my-package";
+  builder = ./builder.sh;
+  system = "x86-64-linux";
+  envvar = 1;
+}
+</code></pre></p>
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="nixpkgs-stdenv" class="slide"><div>
+      <section>
+        <header>
+          <h2>Nixpkgs - stdenv.mkDerivation</h2>
+        </header>
+  
+<p><pre><code>{ stdenv, fetchurl, zlib, bzip2, …, openssl }:
+stdenv.mkDerivation {
+  name = "python3-3.4.2";
+  src = fetchurl {
+    url = http://www.python.org/…/Python-3.4.2.tar.xz ;
+    sha256 = "1vrd9gqd…s619cv8w";
+  };
+  buildInputs = [ zlib bzip2 … openssl ];
+  // default: ./configure --prefix=$out; make; make install
+}
+</code></pre></p>
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+  <div id="presentation-nix-customize" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Package Manager issues
+        <li class="current">Nix, Developer Friendly
+          <ol>
+            <li>Introduction</li>
+            <li class="current">Customize packages</li>
+            <li>Building Environments</li>
+          </ol>
+        </li>
+        <li>NixOS, Abstract Configuration</li>
+        <li>NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+
+      </footer>
+    </section>
+  </div></div>
+
+
+    <div id="nixpkgs-change-input" class="slide"><div>
+      <section>
+        <header>
+          <h2>Custom dependency</h2>
+        </header>
+  
+<p><pre><code>python34.override {
+  # Test with LibreSSL fork.
+  openssl = libressl;
+}</code></pre></p>
+  
+        <footer class="notes">
+
+<p><pre><code>$ nix-build -A python34_libressl ./custom-1.nix -o ~/python-libressl
+$ nix-build -A python34_nossl ./custom-1.nix -o ~/python-libressl
+</code></pre></p>
+
+        </footer>
+      </section>
+    </div></div>
+
+
+    <div id="nixpkgs-change-src" class="slide"><div>
+      <section>
+        <header>
+          <h2>Custom source</h2>
+        </header>
+  
+<p><pre><code>lib.overrideDerivation python34 {
+  # Do not fetch the sources
+  # Use a local copy instead.
+  src = /home/nicolas/cpython ;
+}
+</code></pre></p>
+  
+        <footer class="notes">
+
+<p><pre><code>$ nix-build -A python35 ./custom-2.nix -o ~/python35
+</code></pre></p>
+
+        </footer>
+      </section>
+    </div></div>
+
+
+  <div id="presentation-nix-shell" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Package Manager issues
+        <li class="current">Nix, Developer Friendly
+          <ol>
+            <li>Introduction</li>
+            <li>Customize packages</li>
+            <li class="current">Building Environments</li>
+          </ol>
+        </li>
+        <li>NixOS, Abstract Configuration</li>
+        <li>NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+
+      </footer>
+    </section>
+  </div></div>
+
+
+    <div id="nix-shell-buildenv" class="slide"><div>
+      <section>
+        <header>
+          <h2>nix-shell Build Environment</h2>
+        </header>
+  
+        <img src="img/python-build-env.dot.svg"
+             class="middle" height="400"
+             alt="">
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+
+  <div id="presentation-nixos-confmngt" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Package Manager issues
+        <li>Nix, Developer Friendly</li>
+        <li class="current">NixOS, Abstract Configuration
+          <ol>
+            <li class="current">Configuration Management</li>
+            <li>Declarative &amp; Modular</li>
+          </ol>
+        </li>
+        <li>NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+
+      </footer>
+    </section>
+  </div></div>
+
+    <div id="confmgnt-introduction" class="slide"><div>
+      <section>
+        <header>
+          <h2>Configuration Management</h2>
+        </header>
+  
+        <p>Principle: Automate the configuration to reproduce it.</p>
+        <p>Many tools:</p>
+        <ul>
+          <li>Puppet</li>
+          <li>Chef</li>
+          <li>Ansible</li>
+          <li>Salt</li>
+          <li>…</li>
+        </ul>
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="confmgnt-mutation" class="slide"><div>
+      <section>
+        <header>
+          <h2>Configuration by mutation</h2>
+        </header>
+  
+        <!-- :TODO: Add an image -->
+        <p>Only describe a subset of the configuration.</p>
+        <p>Incomplete: Cannot describe the absence of <strong>all</strong> unused packages.</p>
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="confmgnt-before" class="slide"><div>
+      <section>
+        <header>
+          <h2>Configuration by installation</h2>
+        </header>
+  
+        <p>Complete: Anything which is included is present.</p>
+        <p>Many tools:</p>
+        <ol>
+          <li>rpm</li>
+          <li>deb</li>
+          <li>…</li>
+        </ol>
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="confmgnt-isolation" class="slide"><div>
+      <section>
+        <header>
+          <h2>NixOS - Configuration with isolation</h2>
+        </header>
+  
+        <img src="img/nixos-deps.dot.svg"
+             class="middle" width="600"
+             alt="">
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+
+  <div id="presentation-nixos-declmod" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Package Manager issues
+        <li>Nix, Developer Friendly</li>
+        <li class="current">NixOS, Abstract Configuration
+          <ol>
+            <li>Configuration Management</li>
+            <li class="current">Declarative &amp; Modular</li>
+          </ol>
+        </li>
+        <li>NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+
+      </footer>
+    </section>
+  </div></div>
+
+    <div id="nixos-decl" class="slide"><div>
+      <section>
+        <header>
+          <h2>NixOS: Declarative configuration</h2>
+        </header>
+  
+<p><pre><code>{
+  services.openssh.enable = true;
+  users.extraUsers.root.openssh.authorizedKeys.keyFiles = [
+    /home/nicolas/.ssh/id.pub
+  ];
+}
+</code></pre></p>
+  
+        <footer class="notes">
+
+<p><pre><code>$ NIXOS_CONFIG=$(pwd)/minimal-conf.nix nixos-rebuild -p fosdem/demo build-vm
+$ QEMU_NET_OPTS="hostfwd=tcp::2222-:22" ./result/bin/run-nixos-vm
+$ ssh -p 2222 root@localhost
+$ nix-store -q --tree ./result
+</code></pre></p>
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="nixos-modular" class="slide"><div>
+      <section>
+        <header>
+          <h2>NixOS: Modular configuration</h2>
+        </header>
+  
+<p><pre><code>{
+  imports = [ ./minimal-conf.nix ];
+
+  services.httpd = {
+    enable = true;
+    adminAddr = "email@local.host";
+    documentRoot = ./. ; # Serve the current directory
+  };
+  networking.firewall.allowedTCPPorts = [ 80 ];
+}
+</code></pre></p>
+  
+        <footer class="notes">
+
+<p><pre><code>$ NIXOS_CONFIG=$(pwd)/minimal-conf.nix nixos-rebuild -p fosdem/demo build-vm
+$ QEMU_NET_OPTS="hostfwd=tcp::8080-:80,hostfwd=tcp::2222-:22" ./result/bin/run-nixos-vm
+</code></pre></p>
+
+        </footer>
+      </section>
+    </div></div>
+
+
+  <div id="presentation-nixops" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Package Manager issues
+        <li>Nix, Developer Friendly</li>
+        <li>NixOS, Abstract Configuration</li>
+        <li class="current">NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+
+      </footer>
+    </section>
+  </div></div>
+
+    <div id="nixos-closure" class="slide"><div>
+      <section>
+        <header>
+          <h2>Closures</h2>
+        </header>
+  
+        <!-- Show a graph where we resolve the closure -->
+        <img src="img/nixos-closure-deps.dot.svg"
+             class="middle" width="600"
+             alt="">
+  
+        <footer class="notes">
+
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="nixops-deploy" class="slide"><div>
+      <section>
+        <header>
+          <h2>NixOps: Deploying closures</h2>
+        </header>
+  
+<p><pre><code>{
+  pres =
+    { config, pkgs, ... }:
+
+    { imports = [ ./modular-conf.nix ];
+      deployment.targetEnv = "container";
+      deployment.container.host = "jupiter.nbp.name";
+    };
+}
+</code></pre></p>
+  
+        <footer class="notes">
+
+<p><pre><code>$ nixops create -d simple ./nixops-conf.nix
+$ nixops deploy -d simple
+</code></pre></p>
+
+        </footer>
+      </section>
+    </div></div>
+
+
+  <div id="presentation-conclusion" class="slide"><div>
+    <section>
+      <header>
+        <h2>Conclusion</h2>
+      </header>
+
+      <p>Benefit of isolation:</p>
+      <ul>
+        <li>Explicits external program dependencies.</li>
+        <li>Help testing custom package.</li>
+        <li>Setup multiple environment (even for users).</li>
+        <li>Map directly to the package manager graph.</li>
+        <li>Copy closures of a complete system.</li>
+      </ul>
+
+      <footer class="notes">
+
+      </footer>
+    </section>
+  </div></div>
+
+
+
+
+
+
+<!--
+
+    <div id="install-component-complete" class="slide"><div>
+      <section>
+        <header>
+          <h2>Package Manager knowledge</h2>
+        </header>
+  
+        !- Patch the above picture to add a new node. -
+  
+        <footer class="notes">
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="folded-directories-issue" class="slide"><div>
+      <section>
+        <header>
+          <h2>Folded directories issues (/bin, /lib, …)</h2>
+        </header>
+  
+        !- Components can interact with other components without explicit declaration of the relation.
+  
+             This means that either the package manager knowledge is incomplete,
+             or the component is miss-behaving because of the lack of isolation.
+  
+             Should apache services have to access gcc?
+  
+             :TODO: Add an example of folded directory file hierarchy.
+  
+             Inherited dependencies: If a user install a program, this does not mean that anything the program depends on should also be available to the user.
+               -  If you want to install a project implemented in Python, do you want to have a python interpreter?
+        -
+  
+          <ol>
+            <li>Missing dependency, or unexpected behaviour.</li>
+            <li>Correctness issue: Dependencies might change.</li>
+            <li>Completeness issue: Dependencies might be removed.</li>
+            <li>Inherited dependencies.</li>
+          </ol>
+  
+        <footer class="notes">
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="upgrading-problem" class="slide"><div>
+      <section>
+        <header>
+          <h2>Upgrading Problem</h2>
+        </header>
+        <p>Upgrade: </p>
+        <ol>
+          <li>Maintain correctness. (during? / after)</li>
+          <li>Maintain completeness. (everything installed)</li>
+          !-
+  
+  Inherited dependencies:
+   - If the program written in python is switching to ruby, should we remove the python interpreter from the user environment and make the ruby environment visible instead?
+  
+   - What happens if another program used to implicitly depend on python?
+  
+          -
+          <li>Inherited dependencies?</li>
+          <li></li>
+        </ol></p>
+        <footer class="notes">
+        </footer>
+      </section>
+    </div></div>
+-->
+<!--
+    <div id="package-managers-goal" class="slide"><div>
+      <section>
+        <header>
+          <h2>Package Managers goal</h2>
+        </header>
+        <p>Make the graph complete.</p>
+        <footer class="notes">
+  
+  Package managers are doing an awesome work at making sure that the dependency graph is complete.
+  Unfortunately, they are working in an imperfect world which is constantly messing up with the purity of the graph representation.
+  
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="source-vs-binary" class="slide"><div>
+      <section>
+        <header>
+          <h2>Source vs. Binary</h2>
+        </header>
+  
+  
+        <footer class="notes">
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="binary-implies-trust" class="slide"><div>
+      <section>
+        <header>
+          <h2>Binary</h2>
+        </header>
+        <p></p>
+        <ol>
+          <li></li>
+          <li></li>
+          <li></li>
+          <li></li>
+        </ol>
+        <footer class="notes">
+        </footer>
+      </section>
+    </div></div>
+
+    <div id="source-is-customizable" class="slide"><div>
+      <section>
+        <header>
+          <h2>Source</h2>
+        </header>
+        <ol>
+          <li></li>
+          <li></li>
+          <li></li>
+          <li></li>
+        </ol>
+        <footer class="notes">
+        </footer>
+      </section>
+    </div></div>
+
+
+  <div id="presentation-Nix-dev-friendly" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Package Manager issues</li>
+        <li class="current">Nix, Developer Friendly</li>
+        <li>NixOS, Declarative Configuration</li>
+        <li>NixOps, Deployment made</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+
+  <div id="nix-introduction-1" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix Incomplete Introduction (1/…)</h2>
+      </header>
+      <ol>
+        <li>Isolation</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+<!-- Nix store representation -->
+<!--
+  <div id="nix-introduction-2" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix Incomplete Introduction (2/…)</h2>
+      </header>
+      <ol>
+        <li>Source-based</li>
+        <li>Pure &amp; Reliable recipes</li>
+        <li>Binary optimization</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+<!-- Trust for knowing who compiled what into what, and pull from anybody -->
+<!--
+  <div id="nix-introduction-3" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix Incomplete Introduction (3/…)</h2>
+      </header>
+      <ol>
+        <li>User-environments</li>
+      </ol>
+      <footer class="notes">
+
+We delegate the builds to a daemon which is in charge of taking care of
+applying the recipes for each users.  Only the daemon can access the Nix stores
+and no user can manipulate it directly.
+
+The best advantage being that one user can build an environment such as a
+tool-chain for a project.  This is convenient way to update the project
+dependencies.
+
+People don't read documentation, thus you should write code ;)
+
+      </footer>
+    </section>
+  </div></div>
+-->
+<!-- nix-env, can help you build custom environments, as a user. -->
+<!-- nix-shell, can help you build custom environments for a project, as a user -->
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
+

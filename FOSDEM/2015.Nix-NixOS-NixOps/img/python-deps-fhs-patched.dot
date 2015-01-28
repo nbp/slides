@@ -1,0 +1,60 @@
+digraph G {rankdir=LR; bgcolor="transparent";
+
+"/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [label = "python-2.7.9", shape = box, style = filled, fillcolor = "#00ff00"];
+// "/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "black"];
+// "/nix/store/96vfgc1gfwslmg3hhfzkxsvqqc61mh89-bzip2-1.0.6" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "red"];
+// "/nix/store/a2p5i9hb5hpqssh7vp402r6n9slfayqx-zlib-1.2.8" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "green"];
+// "/nix/store/cxrc12hkmvrjlq747cm08av6jl41nzi1-bash-4.3-p30" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "blue"];
+// "/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "magenta"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9" [color = "burlywood"];
+"/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k" [label = "openssl-1.0.1k", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/482l1wbyrbqzy8pm0mh9psvk7f7x2qnf-perl-5.20.1" -> "/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k" [color = "black"];
+// "/nix/store/cxrc12hkmvrjlq747cm08av6jl41nzi1-bash-4.3-p30" -> "/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k" [color = "red"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k" [color = "green"];
+"/nix/store/482l1wbyrbqzy8pm0mh9psvk7f7x2qnf-perl-5.20.1" [label = "perl-5.20.1", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23" -> "/nix/store/482l1wbyrbqzy8pm0mh9psvk7f7x2qnf-perl-5.20.1" [color = "blue"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/482l1wbyrbqzy8pm0mh9psvk7f7x2qnf-perl-5.20.1" [color = "magenta"];
+// "/nix/store/p9rmkj5s68cjhjnb8msj477wcm5157rx-gcc-4.8.4" -> "/nix/store/482l1wbyrbqzy8pm0mh9psvk7f7x2qnf-perl-5.20.1" [color = "burlywood"];
+"/nix/store/96vfgc1gfwslmg3hhfzkxsvqqc61mh89-bzip2-1.0.6" [label = "bzip2-1.0.6", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/96vfgc1gfwslmg3hhfzkxsvqqc61mh89-bzip2-1.0.6" [color = "black"];
+"/nix/store/a2p5i9hb5hpqssh7vp402r6n9slfayqx-zlib-1.2.8" [label = "zlib-1.2.8", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/a2p5i9hb5hpqssh7vp402r6n9slfayqx-zlib-1.2.8" [color = "red"];
+"/nix/store/cxrc12hkmvrjlq747cm08av6jl41nzi1-bash-4.3-p30" [label = "bash-4.3-p30", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/cxrc12hkmvrjlq747cm08av6jl41nzi1-bash-4.3-p30" [color = "green"];
+"/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23" [label = "coreutils-8.23", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/54whwk19x8cgak0pwnnzzq282hwaf8f3-acl-2.2.52" -> "/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23" [color = "blue"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23" [color = "magenta"];
+"/nix/store/54whwk19x8cgak0pwnnzzq282hwaf8f3-acl-2.2.52" [label = "acl-2.2.52", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/f9i3xzbkx0frdqwqvy8qpk6gcclzf02f-attr-2.4.47" -> "/nix/store/54whwk19x8cgak0pwnnzzq282hwaf8f3-acl-2.2.52" [color = "burlywood"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/54whwk19x8cgak0pwnnzzq282hwaf8f3-acl-2.2.52" [color = "black"];
+"/nix/store/f9i3xzbkx0frdqwqvy8qpk6gcclzf02f-attr-2.4.47" [label = "attr-2.4.47", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/f9i3xzbkx0frdqwqvy8qpk6gcclzf02f-attr-2.4.47" [color = "red"];
+"/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" [label = "glibc-2.20", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/jvlrfyjlm4m0jykiw33dk5kjyzmgysiw-linux-headers-3.12.32" -> "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" [color = "green"];
+"/nix/store/jvlrfyjlm4m0jykiw33dk5kjyzmgysiw-linux-headers-3.12.32" [label = "linux-headers-3.12.32", shape = box, style = filled, fillcolor = "#ffffff"];
+"/nix/store/p9rmkj5s68cjhjnb8msj477wcm5157rx-gcc-4.8.4" [label = "gcc-4.8.4", shape = box, style = filled, fillcolor = "#ffffff"];
+// "/nix/store/a2p5i9hb5hpqssh7vp402r6n9slfayqx-zlib-1.2.8" -> "/nix/store/p9rmkj5s68cjhjnb8msj477wcm5157rx-gcc-4.8.4" [color = "blue"];
+// "/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20" -> "/nix/store/p9rmkj5s68cjhjnb8msj477wcm5157rx-gcc-4.8.4" [color = "magenta"];
+
+"not-managed-1.0.0" [label = "not-managed-1.0.0", shape = box, style = filled, fillcolor = "#ff0000"];
+// "/nix/store/482l1wbyrbqzy8pm0mh9psvk7f7x2qnf-perl-5.20.1" -> "not-managed-1.0.0" [color = "red", style = dashed];
+
+{ rank=same;
+        
+"/nix/store/482l1wbyrbqzy8pm0mh9psvk7f7x2qnf-perl-5.20.1"
+"/nix/store/54whwk19x8cgak0pwnnzzq282hwaf8f3-acl-2.2.52"
+"/nix/store/8nxzd6jkgcihyx26m246ycpnpivicpak-openssl-1.0.1k"
+"/nix/store/96vfgc1gfwslmg3hhfzkxsvqqc61mh89-bzip2-1.0.6"
+"/nix/store/a2p5i9hb5hpqssh7vp402r6n9slfayqx-zlib-1.2.8"
+"/nix/store/cxrc12hkmvrjlq747cm08av6jl41nzi1-bash-4.3-p30"
+"/nix/store/f9i3xzbkx0frdqwqvy8qpk6gcclzf02f-attr-2.4.47"
+"/nix/store/h4ssyq8lac0ywmn8j0lsichvj9fvcfyd-coreutils-8.23"
+"/nix/store/jvlrfyjlm4m0jykiw33dk5kjyzmgysiw-linux-headers-3.12.32"
+"/nix/store/l8rhnzq9yxqhv3il4kmzqhkx8q06jzgv-python-2.7.9"
+"/nix/store/nrxyygy0wqski1klq0305d3h523k41ps-glibc-2.20"
+"/nix/store/p9rmkj5s68cjhjnb8msj477wcm5157rx-gcc-4.8.4"
+
+"not-managed-1.0.0"
+
+}
+}
