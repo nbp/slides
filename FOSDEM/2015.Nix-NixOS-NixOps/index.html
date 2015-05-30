@@ -47,6 +47,10 @@ Full Description
 * NixOps
  - Provisioning a configuration.
  - Demo: Testing deployment.
+
+
+sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
+
 -->
 
   <meta name="viewport" content="width=device-width, user-scalable=yes">
@@ -422,6 +426,9 @@ Apparently, python developers noticed and partially solved this issue for them-s
     <section>
       <header>
         <h2>This Presentation</h2>
+        <div class="right">
+          <img src="img/nixos-snowflake.svg" height=150/>
+        </div>
       </header>
       <ol>
         <li>Package Manager issues
@@ -592,7 +599,8 @@ stdenv.mkDerivation {
   
         <footer class="notes">
 
-<p><pre><code>$ nix-build -A python34_libressl ./custom-1.nix -o ~/python-libressl
+<p><pre><code>
+$ nix-build -A python34_libressl ./custom-1.nix -o ~/python-libressl
 $ nix-build -A python34_nossl ./custom-1.nix -o ~/python-libressl
 </code></pre></p>
 
@@ -616,7 +624,8 @@ $ nix-build -A python34_nossl ./custom-1.nix -o ~/python-libressl
   
         <footer class="notes">
 
-<p><pre><code>$ nix-build -A python35 ./custom-2.nix -o ~/python35
+<p><pre><code>
+$ nix-build -A python35 ./custom-2.nix -o ~/python35
 </code></pre></p>
 
         </footer>
@@ -659,7 +668,11 @@ $ nix-build -A python34_nossl ./custom-1.nix -o ~/python-libressl
              alt="">
   
         <footer class="notes">
-
+<p><pre><code>
+$ pushd ~/cpython
+$ nix-shell '<nixpkgs>' -A python34 --pure
+$ popd
+</code></pre></p>
         </footer>
       </section>
     </div></div>
@@ -800,8 +813,9 @@ $ nix-build -A python34_nossl ./custom-1.nix -o ~/python-libressl
   
         <footer class="notes">
 
-<p><pre><code>$ NIXOS_CONFIG=$(pwd)/minimal-conf.nix nixos-rebuild -p fosdem/demo build-vm
-$ QEMU_NET_OPTS="hostfwd=tcp::2222-:22" ./result/bin/run-nixos-vm
+<p><pre><code>
+$ NIXOS_CONFIG=$(pwd)/minimal-conf.nix nix-build '&lt;nixpkgs/nixos&gt;' -A vm
+$ QEMU_NET_OPTS="hostfwd=tcp::2222-:22" ./result/bin/run-nixos-vm &amp;
 $ ssh -p 2222 root@localhost
 $ nix-store -q --tree ./result
 </code></pre></p>
@@ -830,8 +844,9 @@ $ nix-store -q --tree ./result
   
         <footer class="notes">
 
-<p><pre><code>$ NIXOS_CONFIG=$(pwd)/minimal-conf.nix nixos-rebuild -p fosdem/demo build-vm
-$ QEMU_NET_OPTS="hostfwd=tcp::8080-:80,hostfwd=tcp::2222-:22" ./result/bin/run-nixos-vm
+<p><pre><code>
+$ NIXOS_CONFIG=$(pwd)/modular-conf.nix nix-build '&lt;nixpkgs/nixos&gt;' -A vm
+$ QEMU_NET_OPTS="hostfwd=tcp::8080-:80,hostfwd=tcp::2222-:22" ./result/bin/run-nixos-vm &amp;
 </code></pre></p>
 
         </footer>
@@ -892,7 +907,8 @@ $ QEMU_NET_OPTS="hostfwd=tcp::8080-:80,hostfwd=tcp::2222-:22" ./result/bin/run-n
   
         <footer class="notes">
 
-<p><pre><code>$ nixops create -d simple ./nixops-conf.nix
+<p><pre><code>
+$ nixops create -d simple ./nixops-conf.nix
 $ nixops deploy -d simple
 </code></pre></p>
 
@@ -907,13 +923,13 @@ $ nixops deploy -d simple
         <h2>Conclusion</h2>
       </header>
 
-      <p>Benefit of isolation:</p>
+      <p>Benefits of isolation:</p>
       <ul>
+        <li>Maps directly to the package manager graph.</li>
         <li>Explicits external program dependencies.</li>
         <li>Help testing custom package.</li>
         <li>Setup multiple environment (even for users).</li>
-        <li>Map directly to the package manager graph.</li>
-        <li>Copy closures of a complete system.</li>
+        <li>Copy closures of a package, or a complete system.</li>
       </ul>
 
       <footer class="notes">
