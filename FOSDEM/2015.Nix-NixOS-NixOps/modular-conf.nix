@@ -10,5 +10,5 @@
     adminAddr = "a.a@a.a";
     documentRoot = ./. ;
   };
-  networking.firewall.allowedTCPPorts = [ config.services.httpd.port ];
+  networking.firewall.allowedTCPPorts = [ 80 ];
 }
