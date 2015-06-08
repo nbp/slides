@@ -1,0 +1,670 @@
+<!DOCTYPE HTML>
+<html lang="en-US" class="fade">
+<head>
+  <meta charset="UTF-8">
+  <title>Nix: Yet Another Package Manager?</title>
+
+<!--
+
+* Why
+
+ - Managing dependencies correctly is a difficult problem
+ - 
+
+* How
+
+ - How do we manage dependencies today?
+   - Make, dpkg, rpm
+     - meta-data
+   - (other form of dependencies),
+ Garbage Collector
+     - Detect pointers
+
+* What
+
+
+
+sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
+
+-->
+
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="styles/style.css">
+  <link rel="stylesheet" href="styles/tree.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>Nix: Yet Another Package Manager?</h1>
+    <p class="footer">
+      Nicolas B. Pierron
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong>
+
+
+    </p>
+  </aside>
+
+
+  <div id="cover" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2 style="text-align: center;">Nix: Yet Another Package Manager?</h2>
+      </header>
+      <img src="img/multiple.jpg"
+           class="middle shadow" height="100%"
+           alt="">
+      <small class="byline">
+        Nicolas B. Pierron<br>
+        #NixOSParis 2015-06-04
+      </small>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="yet-another" class="slide"><div>
+    <section>
+      <header>
+        <h2>Yet Another?</h2>
+      </header>
+      <img src="http://imgs.xkcd.com/comics/standards.png"
+           class="middle shadow" height="350"
+           alt="">
+
+      <small class="byline">
+        Xkcd<br>
+        Creative Commons Attribution-NonCommercial 2.5 License
+      </small>
+     <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+<!--
+  <div id="presentation-pmi-isolation" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li class="current">Package Manager issues
+          <ol>
+            <li class="current">Coherency &amp; Isolation</li>
+            <li>Source vs. Binary</li>
+          </ol>
+        </li>
+        <li>Nix, Developer Friendly</li>
+        <li>NixOS, Abstract Configuration</li>
+        <li>NixOps, Deployment Friendly</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+
+
+<!--
+  <div id="why-another" class="slide"><div>
+    <section>
+      <header>
+        <h2>Why Another?</h2>
+      </header>
+      <p>Package Managers are:</p>
+      <ol>
+        <!- <li>Too-clever</li> ->
+        <li>Mutating files</li>
+        <li>Not responsible …</li>
+      </ol>
+
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+<!--
+  <div id="pkgmgr-are-too-clever" class="slide"><div>
+    <section>
+      <header>
+        <h2>Too clever?</h2>
+      </header>
+      <small><pre>
+# apt-get install nmap
+...
+The following NEW packages will be installed:
+  fonts-droid fonts-liberation ghostscript gnuplot gnuplot-nox groff gsfonts
+  imagemagick imagemagick-common libblas3 libblas3gf libcroco3 libcupsimage2
+  libdjvulibre-text libdjvulibre21 libexiv2-12 libgfortran3 libgs9
+  libgs9-common libijs-0.35 libilmbase6 libjbig2dec0 liblcms1 liblcms2-2
+  liblensfun-data litesting firewall blensfun0 liblinear-tools liblinear1 liblqr-1-0
+  libmagickcore5 libmagickcore5-extra libmagickwand5 libnetpbm10 libopenexr6
+  libpaper-utils libpaper1 librsvg2-2 librsvg2-common libsvm-tools libwmf0.2-7
+  netpbm nmap poppler-data psutils ufraw-batch
+0 upgraded, 45 newly installed, 0 to remove and 0 not upgraded.
+      </pre></small>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+<!--
+  <div id="pkgmgr-are-too-clever-2" class="slide"><div>
+    <section>
+      <header>
+        <h2>Too clever?</h2>
+      </header>
+      <small><pre>
+# apt-get -no-install-recommends install nmap
+...
+The following NEW packages will be installed:
+  libblas3 libblas3gf libgfortran3 liblinear1 nmap
+0 upgraded, 5 newly installed, 0 to remove and 0 not upgraded.
+     </pre></small>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+<!--
+  <div id="pkgmgr-mutation" class="slide"><div>
+    <section>
+      <header>
+        <h2>Based on Mutation</h2>
+      </header>
+      <pre>
+ $ apt-get upgrade
+ ...
+ 307 upgraded, 0 newly installed, 0 to remove and 178 not upgraded.
+    </pre>
+
+       <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+<!--
+  <div id="pkgmgr-not-responsible" class="slide"><div>
+    <section>
+      <header>
+        <h2>Not Responsible?</h2>
+      </header>
+      <pre>
+ $ apt-get upgrade
+ ...
+ Do you want to continue [Y/n]?
+    </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+
+
+  <div id="how-to-manage-dependencies" class="slide"><div>
+    <section>
+      <header>
+        <h2>Managing dependencies</h2>
+      </header>
+      <p>Tools:</p>
+      <ol>
+        <li>Package Manager: apt-get, yum, pacman, portage, …</li>
+        <li>Build system: make, cmake, setup.py, …</li>
+      </ol>
+      <p>Method:</p>
+      <ol>
+        <li>Read &amp; Create a dependency graph</li>
+        <li>Check for updates</li>
+        <li>Download / Build the result</li>
+        <li>Replace existing files</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+<!--
+  <div id="binary-pkgmgr" class="slide"><div>
+    <section>
+      <header>
+        <h2>Binary Package Manager</h2>
+      </header>
+      <p>List all programs which are needed for the execution</p>
+<div class="dep-tree">  <ul class="tree">  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="1"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/22002596"><tt>python-2.7.9</tt></a></span></span>        <ul class="subtree">  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="2"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21814343"><tt>glibc-2.21</tt></a></span></span>        <ul class="subtree">  <li>      <span id="3"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21223040"><tt>linux-headers-3.12.32</tt></a></span></span>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="4"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21814343"><tt>bash-4.3-p33</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="5"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879395"><tt>openssl-1.0.1m</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="6"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879395"><tt>perl-5.20.2</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="7"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21814343"><tt>coreutils-8.23</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="8"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21814343"><tt>acl-2.2.52</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="9"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21814343"><tt>attr-2.4.47</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>        </ul>  </li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21814343"><tt>gcc-4.8.4</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="11"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21814343"><tt>zlib-1.2.8</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>        </ul>  </li>        </ul>  </li>        </ul>  </li>  <li>      <tt>bash-4.3-p33</tt></li>        </ul>  </li>  <li>      <tt>coreutils-8.23</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="12"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21814343"><tt>bzip2-1.0.6</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>        </ul>  </li>  <li>      <tt>zlib-1.2.8</tt></li>        </ul>  </li>  </ul>
+</div>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+<!--
+  <div id="source-pjgmgr" class="slide"><div>
+    <section>
+      <header>
+        <h2>Source Package Manager</h2>
+      </header>
+      <p>List all programs which are needed to build the sources</p>
+<div class="dep-tree">  <ul class="tree">  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10000"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/22002596"><tt>python-2.7.9</tt></a></span></span>        <ul class="subtree">  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10001"><span class="dep-tree-line">          <tt>glibc-2.21</tt></span></span>        <ul class="subtree">  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10002"><span class="dep-tree-line">          <tt>bootstrap-tools</tt></span></span>        <ul class="subtree">  <li>      <span id="10003"><span class="dep-tree-line">          <tt>busybox</tt></span></span>  </li>  <li>      <span id="10004"><span class="dep-tree-line">          <tt>bootstrap-tools.tar.xz</tt></span></span>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10005"><span class="dep-tree-line">          <tt>glibc-2.21.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10006"><span class="dep-tree-line">          <tt>stdenv-linux-boot</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10007"><span class="dep-tree-line">          <tt>mirrors-list</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10008"><span class="dep-tree-line">          <tt>stdenv-linux-boot</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10009"><span class="dep-tree-line">          <tt>bootstrap-gcc-wrapper</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10010"><span class="dep-tree-line">          <tt>binutils-2.23.1</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10011"><span class="dep-tree-line">          <tt>stdenv-linux-boot</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10012"><span class="dep-tree-line">          <tt>bootstrap-gcc-wrapper</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10013"><span class="dep-tree-line">          <tt>bootstrap-glibc</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>        </ul>  </li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10014"><span class="dep-tree-line">          <tt>binutils-2.23.1.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10015"><span class="dep-tree-line">          <tt>zlib-1.2.8</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10016"><span class="dep-tree-line">          <tt>zlib-1.2.8.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv-linux-boot</tt></li>        </ul>  </li>        </ul>  </li>  <li>      <tt>bootstrap-glibc</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10017"><span class="dep-tree-line">          <tt>linux-headers-3.12.32</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10018"><span class="dep-tree-line">          <tt>perl-5.20.2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10019"><span class="dep-tree-line">          <tt>perl-5.20.2.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>bootstrap-glibc</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10020"><span class="dep-tree-line">          <tt>linux-3.12.32.tar.xz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>      <tt>bootstrap-glibc</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10021"><span class="dep-tree-line">          <tt>bash-4.3-p33</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10022"><span class="dep-tree-line">          <tt>bash43-023</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10023"><span class="dep-tree-line">          <tt>bash43-008</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10024"><span class="dep-tree-line">          <tt>bash43-028</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10025"><span class="dep-tree-line">          <tt>stdenv-linux-boot</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10026"><span class="dep-tree-line">          <tt>patchelf-0.8</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10027"><span class="dep-tree-line">          <tt>patchelf-0.8.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv-linux-boot</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10028"><span class="dep-tree-line">          <tt>gcc-wrapper-4.8.4</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>glibc-2.21</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10029"><span class="dep-tree-line">          <tt>gcc-4.8.4</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10030"><span class="dep-tree-line">          <tt>stdenv-linux-boot</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>patchelf-0.8</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10031"><span class="dep-tree-line">          <tt>paxctl-0.9</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10032"><span class="dep-tree-line">          <tt>paxctl-0.9.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10033"><span class="dep-tree-line">          <tt>bootstrap-gcc-wrapper</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>binutils-2.23.1</tt></li>  <li>      <tt>glibc-2.21</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10034"><span class="dep-tree-line">          <tt>gmp-5.1.3</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10035"><span class="dep-tree-line">          <tt>gmp-5.1.3.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10036"><span class="dep-tree-line">          <tt>gnum4-1.4.17</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10037"><span class="dep-tree-line">          <tt>m4-1.4.17.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10038"><span class="dep-tree-line">          <tt>isl-0.14</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10039"><span class="dep-tree-line">          <tt>isl-0.14.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>gmp-5.1.3</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10040"><span class="dep-tree-line">          <tt>gcc-4.8.4.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>glibc-2.21</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10041"><span class="dep-tree-line">          <tt>which-2.21</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10042"><span class="dep-tree-line">          <tt>which-2.21.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10043"><span class="dep-tree-line">          <tt>libelf-0.8.13</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10044"><span class="dep-tree-line">          <tt>libelf-0.8.13.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10045"><span class="dep-tree-line">          <tt>zlib-1.2.8</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>zlib-1.2.8.tar.gz</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>        </ul>  </li>  <li>      <tt>perl-5.20.2</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10046"><span class="dep-tree-line">          <tt>mpfr-3.1.2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10047"><span class="dep-tree-line">          <tt>mpfr-3.1.2.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>gmp-5.1.3</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10048"><span class="dep-tree-line">          <tt>libmpc-1.0.3</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10049"><span class="dep-tree-line">          <tt>mpc-1.0.3.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>gmp-5.1.3</tt></li>  <li>      <tt>mpfr-3.1.2</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10050"><span class="dep-tree-line">          <tt>cloog-0.18.3</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>gmp-5.1.3</tt></li>  <li>      <tt>isl-0.14</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10051"><span class="dep-tree-line">          <tt>cloog-0.18.3.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10052"><span class="dep-tree-line">          <tt>gettext-0.19.4</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10053"><span class="dep-tree-line">          <tt>gettext-0.19.4.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10054"><span class="dep-tree-line">          <tt>xz-5.2.1</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10055"><span class="dep-tree-line">          <tt>xz-5.2.1.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv-linux-boot</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10056"><span class="dep-tree-line">          <tt>texinfo-5.2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10057"><span class="dep-tree-line">          <tt>texinfo-5.2.tar.xz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>perl-5.20.2</tt></li>  <li>      <tt>xz-5.2.1</tt></li>        </ul>  </li>        </ul>  </li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>binutils-2.23.1</tt></li>        </ul>  </li>  <li>      <tt>xz-5.2.1</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10058"><span class="dep-tree-line">          <tt>bash43-019</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10059"><span class="dep-tree-line">          <tt>bash43-004</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10060"><span class="dep-tree-line">          <tt>bash43-020</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10061"><span class="dep-tree-line">          <tt>bash43-029</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10062"><span class="dep-tree-line">          <tt>bash43-012</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10063"><span class="dep-tree-line">          <tt>bash43-025</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10064"><span class="dep-tree-line">          <tt>bash43-005</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10065"><span class="dep-tree-line">          <tt>bash43-018</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10066"><span class="dep-tree-line">          <tt>bash43-026</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10067"><span class="dep-tree-line">          <tt>bash43-032</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10068"><span class="dep-tree-line">          <tt>bash43-006</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10069"><span class="dep-tree-line">          <tt>bash43-009</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10070"><span class="dep-tree-line">          <tt>bash-4.3.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10071"><span class="dep-tree-line">          <tt>bash43-010</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10072"><span class="dep-tree-line">          <tt>bash43-030</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10073"><span class="dep-tree-line">          <tt>bash43-014</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10074"><span class="dep-tree-line">          <tt>bison-3.0.4</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>gnum4-1.4.17</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10075"><span class="dep-tree-line">          <tt>bison-3.0.4.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>perl-5.20.2</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10076"><span class="dep-tree-line">          <tt>bash43-031</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10077"><span class="dep-tree-line">          <tt>bash43-011</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10078"><span class="dep-tree-line">          <tt>bash43-002</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10079"><span class="dep-tree-line">          <tt>bash43-015</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10080"><span class="dep-tree-line">          <tt>bash43-017</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10081"><span class="dep-tree-line">          <tt>bash43-027</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10082"><span class="dep-tree-line">          <tt>bash43-022</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10083"><span class="dep-tree-line">          <tt>bash43-007</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10084"><span class="dep-tree-line">          <tt>bash43-001</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10085"><span class="dep-tree-line">          <tt>bash43-003</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10086"><span class="dep-tree-line">          <tt>bash43-016</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10087"><span class="dep-tree-line">          <tt>bash43-024</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10088"><span class="dep-tree-line">          <tt>bash43-021</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10089"><span class="dep-tree-line">          <tt>bash43-013</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10090"><span class="dep-tree-line">          <tt>bash43-033</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>      <tt>zlib-1.2.8</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10091"><span class="dep-tree-line">          <tt>bzip2-1.0.6</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10092"><span class="dep-tree-line">          <tt>bzip2-1.0.6.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10093"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879444"><tt>stdenv</tt></a></span></span>        <ul class="subtree">  <li>      <tt>linux-headers-3.12.32</tt></li>  <li>      <tt>glibc-2.21</tt></li>  <li>      <tt>zlib-1.2.8</tt></li>  <li>      <tt>gcc-4.8.4</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10094"><span class="dep-tree-line">          <tt>paxctl-0.9</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>paxctl-0.9.tar.gz</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10095"><span class="dep-tree-line">          <tt>gnumake-4.1</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10096"><span class="dep-tree-line">          <tt>make-4.1.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10097"><span class="dep-tree-line">          <tt>attr-2.4.47</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10098"><span class="dep-tree-line">          <tt>attr-2.4.47.src.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>gettext-0.19.4</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10099"><span class="dep-tree-line">          <tt>acl-2.2.52</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10100"><span class="dep-tree-line">          <tt>acl-2.2.52.src.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>gettext-0.19.4</tt></li>  <li>      <tt>attr-2.4.47</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10101"><span class="dep-tree-line">          <tt>coreutils-8.23</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10102"><span class="dep-tree-line">          <tt>coreutils-8.23.tar.xz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>acl-2.2.52</tt></li>  <li>      <tt>perl-5.20.2</tt></li>  <li>      <tt>gmp-5.1.3</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10103"><span class="dep-tree-line">          <tt>ed-1.10</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10104"><span class="dep-tree-line">          <tt>ed-1.10.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10105"><span class="dep-tree-line">          <tt>patch-2.7.5</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>ed-1.10</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10106"><span class="dep-tree-line">          <tt>patch-2.7.5.tar.xz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10107"><span class="dep-tree-line">          <tt>gzip-1.6</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10108"><span class="dep-tree-line">          <tt>gzip-1.6.tar.xz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10109"><span class="dep-tree-line">          <tt>patchelf-0.8</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>patchelf-0.8.tar.bz2</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10110"><span class="dep-tree-line">          <tt>gnused-4.2.2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10111"><span class="dep-tree-line">          <tt>sed-4.2.2.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10112"><span class="dep-tree-line">          <tt>gnutar-1.28</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10113"><span class="dep-tree-line">          <tt>tar-1.28.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10114"><span class="dep-tree-line">          <tt>diffutils-3.3</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>coreutils-8.23</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10115"><span class="dep-tree-line">          <tt>diffutils-3.3.tar.xz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10116"><span class="dep-tree-line">          <tt>binutils-2.23.1</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>binutils-2.23.1.tar.bz2</tt></li>  <li>      <tt>zlib-1.2.8</tt></li>  <li>      <tt>bison-3.0.4</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10117"><span class="dep-tree-line">          <tt>xz-5.2.1</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>xz-5.2.1.tar.bz2</tt></li>        </ul>  </li>  <li>      <tt>bash-4.3-p33</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10118"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879425"><tt>pcre-8.37</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10119"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879509"><tt>pcre-8.37.tar.bz2</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv-linux-boot</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10120"><span class="dep-tree-line">          <tt>libsigsegv-2.10</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10121"><span class="dep-tree-line">          <tt>libsigsegv-2.10.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10122"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879393"><tt>gawk-4.1.2</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>libsigsegv-2.10</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10123"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879400"><tt>gawk-4.1.2.tar.xz</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>      <tt>bzip2-1.0.6</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10124"><span class="dep-tree-line">          <tt>findutils-4.4.2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>coreutils-8.23</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10125"><span class="dep-tree-line">          <tt>findutils-4.4.2.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10126"><span class="dep-tree-line">          <tt>gcc-wrapper-4.8.4</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>glibc-2.21</tt></li>  <li>      <tt>gcc-4.8.4</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>coreutils-8.23</tt></li>  <li>      <tt>binutils-2.23.1</tt></li>  <li>      <tt>bash-4.3-p33</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10127"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879425"><tt>gnugrep-2.21</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>glibc-2.21</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10128"><span class="dep-tree-line">          <tt>grep-2.21.tar.xz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>pcre-8.37</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10129"><span class="dep-tree-line">          <tt>Python-2.7.9.tar.xz</tt></span></span>        <ul class="subtree">  <li>      <tt>bash-4.3-p33</tt></li>  <li>      <tt>stdenv</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10130"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879411"><tt>mirrors-list</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bash-4.3-p33</tt></li>  <li>      <tt>stdenv</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10131"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21898059"><tt>curl-7.42.1</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bash-4.3-p33</tt></li>  <li>      <tt>zlib-1.2.8</tt></li>  <li>      <tt>stdenv</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10132"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879416"><tt>c-ares-1.10.0</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bash-4.3-p33</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10133"><span class="dep-tree-line">          <tt>c-ares-1.10.0.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10134"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879398"><tt>pkg-config-0.28</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bash-4.3-p33</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10135"><span class="dep-tree-line">          <tt>pkg-config-0.28.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10136"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21893723"><tt>libnghttp2-0.7.13</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bash-4.3-p33</tt></li>  <li>      <tt>stdenv</tt></li>  <li>      <tt>pkg-config-0.28</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10137"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21893723"><tt>nghttp2-0.7.13.tar.xz</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10138"><span class="dep-tree-line">          <tt>curl-7.42.1.tar.bz2</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10139"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879395"><tt>openssl-1.0.1m</tt></a></span></span>        <ul class="subtree">  <li>      <tt>bash-4.3-p33</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10140"><span class="dep-tree-line">          <tt>openssl-1.0.1m.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>stdenv</tt></li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10141"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879395"><tt>perl-5.20.2</tt></a></span></span>        <ul class="subtree">  <li>      <tt>glibc-2.21</tt></li>  <li>      <tt>bash-4.3-p33</tt></li>  <li>      <tt>perl-5.20.2.tar.gz</tt></li>  <li>      <tt>stdenv</tt></li>        </ul>  </li>        </ul>  </li>  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10142"><span class="dep-tree-line">          <a href="http://hydra.nixos.org/build/21879393"><tt>libssh2-1.5.0</tt></a></span></span>        <ul class="subtree">  <li>        <a href="javascript:" class="tree-toggle"></a>      <span id="10143"><span class="dep-tree-line">          <tt>libssh2-1.5.0.tar.gz</tt></span></span>        <ul class="subtree">  <li>      <tt>bootstrap-tools</tt></li>  <li>      <tt>stdenv-linux-boot</tt></li>  <li>      <tt>mirrors-list</tt></li>        </ul>  </li>  <li>      <tt>bash-4.3-p33</tt></li>  <li>      <tt>zlib-1.2.8</tt></li>  <li>      <tt>stdenv</tt></li>  <li>      <tt>openssl-1.0.1m</tt></li>        </ul>  </li>        </ul>  </li>        </ul>  </li>  <li>      <tt>openssl-1.0.1m</tt></li>        </ul>  </li>  </ul>
+</div>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+  <div id="program-analogy-question" class="slide"><div>
+    <section>
+      <header>
+        <h2>Program Analogy?</h2>
+      </header>
+      <table class="side-by-side">
+        <tr> <th>Package Manager</th>          <th>Program</th> </tr>
+        <tr> <td>File System</td>               <td></td> </tr>
+        <tr> <td>Path</td>                     <td></td> </tr>
+        <tr> <td>Package</td> <td></td> </tr>
+        <tr> <td>Package Manager</td><td></td> </tr>
+        <tr> <td>Install</td>      <td></td> </tr>
+        <tr> <td>Remove</td>     <td></td> </tr>
+        <tr> <td>no such file or directory</td>     <td></td> </tr>
+      </table>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="program-analogy" class="slide"><div>
+    <section>
+      <header>
+        <h2>Program Analogy</h2>
+      </header>
+      <table class="side-by-side">
+        <tr> <th>Package Manager</th>          <th>Program</th> </tr>
+        <tr> <td>File System</td>               <td>Memory</td> </tr>
+        <tr> <td>Path</td>                     <td>Pointer</td> </tr>
+        <tr> <td>Package</td> <td>Object<br>(mutable / immutable)</td> </tr>
+        <tr> <td>Package Manager</td><td>Garbage Collector</td> </tr>
+        <tr> <td>Install</td>      <td>Allocate &amp; Root</td> </tr>
+        <tr> <td>Remove</td>     <td>Free / Lose Reference</td> </tr>
+        <tr> <td>no such file or directory</td>     <td>Segmentation Fault</td> </tr>
+      </table>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="nix-properties-1" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix Daemon: Properties</h2>
+      </header>
+      <table class="side-by-side">
+        <tr> <th>Package Manager</th>          <th>Program</th> </tr>
+        <tr> <td>File System</td>               <td>Memory</td> </tr>
+        <tr> <td>Path</td>                     <td>Pointer</td> </tr>
+        <tr> <td>Package</td> <td>Object<br>(mutable / <strong class=important>immutable</strong>)</td> </tr>
+        <tr> <td>Package Manager</td><td><strong class=important>Garbage Collector</strong></td> </tr>
+        <tr> <td>Install</td>      <td>Allocate &amp; <strong class=important>Root</strong></td> </tr>
+        <tr> <td>Remove</td>     <td>Free / <strong class=important>Lose Reference</strong></td> </tr>
+        <tr> <td>no such file or directory</td>     <td>Segmentation Fault</td> </tr>
+      </table>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="nix-properties-2" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix Daemon: Properties</h2>
+      </header>
+      <p>Some garbage collector properties:</p>
+      <ol>
+        <li>Conservative</li>
+        <li>Language Independent</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="conservative-gc" class="slide"><div>
+    <section>
+      <header>
+        <h2>Conservative</h2>
+      </header>
+      <p>Scan packages:</p>
+      <ol>
+        <li>Look for paths (<i>hash</i>)</li>
+        <li>If a path is present, assumes a strong reference.</li>
+        <li>Immutable packages, implies that we can cache references.</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="language-independent" class="slide"><div>
+    <section>
+      <header>
+        <h2>Language Independent</h2>
+      </header>
+        <div class="right">
+          <img src="img/nixos-snowflake.svg" height=150/><br>
+          <center>Nix</center>
+          <img src="img/Guix-logo.svg" height=150/><br>
+          <center>Guix</center>
+        </div>
+      <p>Listen on an UNIX socket:</p>
+      <ol>
+        <li>Add files</li>
+        <li>Add recipes</li>
+        <li>Build recipes</li>
+      </ol>
+      <p>With languages, such as:</p>
+      <ol>
+        <li>The Nix Language</li>
+        <li>Scheme (Guile VM)</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="build-recipes" class="slide"><div>
+    <section>
+      <header>
+        <h2>Generated Build Recipes (.DRV files)</h2>
+      </header>
+      <pre class="small" style="font-family:monospace;">Derive([ ("out","/nix/store/hlf8kajdx1zb387d8z6a4811759jn3kg-python3-3.4.2","","")],
+       [ ("/nix/store/2amb6nsgbjbimgdmclhn7xvwdppvb8sp-openssl-1.0.1m.drv",["out"]),
+         ("/nix/store/3wffffp6k6j0scpxf58c04vy1kby8jx5-bzip2-1.0.6.drv",["out"]),
+         ("/nix/store/6lzz188bxh3zvab1wrimhp0i465951kx-bash-4.3-p30.drv",["out"]),
+         ("/nix/store/kdayv5zfvy5rp6q4zlc011bfpyfk6ifa-stdenv.drv",["out"]),
+         ("/nix/store/njyjybqq70293y3i05yz0m257qhlgg4b-zlib-1.2.8.drv",["out"]),
+         ("/nix/store/y0ypz4fc97yz0r22mbkp54vl3k29w0vg-Python-3.4.2.tar.xz.drv",["out"])],
+       [ "/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh"],
+       "x86_64-linux",
+       "/nix/store/r5sxfcwq9324xvcd1z312kb9kkddqvld-bash-4.3-p30/bin/bash",
+       [ "-e","/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh"],
+       [ ("NIX_LDFLAGS","-lgcc_s"),
+         … … … … … … … … … … … … … …
+         ("src","/nix/store/a8zb3r363n29lgl2mlmkpikqa4nf7x5w-Python-3.4.2.tar.xz"),
+         ("stdenv","/nix/store/2xppxfdg15ra07izp3ww1ddqfywiwf05-stdenv")])
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="build-recipes-output-hash" class="slide"><div>
+    <section>
+      <header>
+        <h2>Output Path</h2>
+      </header>
+      <pre class="small" style="font-family:monospace;">Derive([ ("out","/nix/store/<strong class=red>hlf8kajdx1zb387d8z6a4811759jn3kg-python3-3.4.2</strong>","","")],
+       [ ("/nix/store/2amb6nsgbjbimgdmclhn7xvwdppvb8sp-openssl-1.0.1m.drv",["out"]),
+         ("/nix/store/3wffffp6k6j0scpxf58c04vy1kby8jx5-bzip2-1.0.6.drv",["out"]),
+         ("/nix/store/6lzz188bxh3zvab1wrimhp0i465951kx-bash-4.3-p30.drv",["out"]),
+         ("/nix/store/kdayv5zfvy5rp6q4zlc011bfpyfk6ifa-stdenv.drv",["out"]),
+         ("/nix/store/njyjybqq70293y3i05yz0m257qhlgg4b-zlib-1.2.8.drv",["out"]),
+         ("/nix/store/y0ypz4fc97yz0r22mbkp54vl3k29w0vg-Python-3.4.2.tar.xz.drv",["out"])],
+       [ "/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh"],
+       "x86_64-linux",
+       "/nix/store/r5sxfcwq9324xvcd1z312kb9kkddqvld-bash-4.3-p30/bin/bash",
+       [ "-e","/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh"],
+       [ ("NIX_LDFLAGS","-lgcc_s"),
+         … … … … … … … … … … … … … …
+         ("src","/nix/store/a8zb3r363n29lgl2mlmkpikqa4nf7x5w-Python-3.4.2.tar.xz"),
+         ("stdenv","/nix/store/2xppxfdg15ra07izp3ww1ddqfywiwf05-stdenv")])
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="build-recipes-substitution" class="slide"><div>
+    <section>
+      <header>
+        <h2>Dependencies Substitution</h2>
+      </header>
+      <pre class="small" style="font-family:monospace;">Derive([ ("out","/nix/store/hlf8kajdx1zb387d8z6a4811759jn3kg-python3-3.4.2","","")],
+       [ ("/nix/store/2amb6nsgbjbimgdmclhn7xvwdppvb8sp-openssl-1.0.1m.drv",["out"]),
+         ("/nix/store/3wffffp6k6j0scpxf58c04vy1kby8jx5-bzip2-1.0.6.drv",["out"]),
+         ("/nix/store/6lzz188bxh3zvab1wrimhp0i465951kx-bash-4.3-p30.drv",["out"]),
+         ("/nix/store/<strong class=red>kdayv5zfvy5rp6q4zlc011bfpyfk6ifa-stdenv.drv</strong>",["out"]),
+         ("/nix/store/njyjybqq70293y3i05yz0m257qhlgg4b-zlib-1.2.8.drv",["out"]),
+         ("/nix/store/y0ypz4fc97yz0r22mbkp54vl3k29w0vg-Python-3.4.2.tar.xz.drv",["out"])],
+       [ "/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh"],
+       "x86_64-linux",
+       "/nix/store/r5sxfcwq9324xvcd1z312kb9kkddqvld-bash-4.3-p30/bin/bash",
+       [ "-e","/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh"],
+       [ ("NIX_LDFLAGS","-lgcc_s"),
+         … … … … … … … … … … … … … …
+         ("src","/nix/store/a8zb3r363n29lgl2mlmkpikqa4nf7x5w-Python-3.4.2.tar.xz"),
+         ("stdenv","/nix/store/<strong class=red>2xppxfdg15ra07izp3ww1ddqfywiwf05-stdenv</strong>")])
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="build-recipes-builder-independent" class="slide"><div>
+    <section>
+      <header>
+        <h2>Builder Independent</h2>
+      </header>
+      <pre class="small" style="font-family:monospace;">Derive([ ("out","/nix/store/hlf8kajdx1zb387d8z6a4811759jn3kg-python3-3.4.2","","")],
+       [ ("/nix/store/2amb6nsgbjbimgdmclhn7xvwdppvb8sp-openssl-1.0.1m.drv",["out"]),
+         ("/nix/store/3wffffp6k6j0scpxf58c04vy1kby8jx5-bzip2-1.0.6.drv",["out"]),
+         ("/nix/store/6lzz188bxh3zvab1wrimhp0i465951kx-bash-4.3-p30.drv",["out"]),
+         ("/nix/store/kdayv5zfvy5rp6q4zlc011bfpyfk6ifa-stdenv.drv",["out"]),
+         ("/nix/store/njyjybqq70293y3i05yz0m257qhlgg4b-zlib-1.2.8.drv",["out"]),
+         ("/nix/store/y0ypz4fc97yz0r22mbkp54vl3k29w0vg-Python-3.4.2.tar.xz.drv",["out"])],
+       [ "/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh"],
+       "x86_64-linux",
+       "<strong class=red>/nix/store/r5sxfcwq9324xvcd1z312kb9kkddqvld-bash-4.3-p30/bin/bash</strong>",
+       [ "-e","/nix/store/9krlzvny65gdc8s7kpb6lkx8cd02c25b-default-builder.sh"],
+       [ ("NIX_LDFLAGS","-lgcc_s"),
+         … … … … … … … … … … … … … …
+         ("src","/nix/store/a8zb3r363n29lgl2mlmkpikqa4nf7x5w-Python-3.4.2.tar.xz"),
+         ("stdenv","/nix/store/2xppxfdg15ra07izp3ww1ddqfywiwf05-stdenv")])
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="dependency-graph-done" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix: Managing dependencies</h2>
+      </header>
+      <p>Method:</p>
+      <ol>
+        <li class=done>Read &amp; Create a dependency graph</li>
+        <li>Check for updates</li>
+        <li>Download / Build the result</li>
+        <li>Replace existing files</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="check-for-updates" class="slide"><div>
+    <section>
+      <header>
+        <h2>Check for Updates</h2>
+      </header>
+      <p>Immutable Paths:</p>
+      <ol>
+        <li>Is the output present?</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="check-for-updates-done" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix: Managing dependencies</h2>
+      </header>
+      <p>Method:</p>
+      <ol>
+        <li class=done>Read &amp; Create a dependency graph</li>
+        <li class=done>Check for updates</li>
+        <li>Download / Build the result</li>
+        <li>Replace existing files</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="dowload" class="slide"><div>
+    <section>
+      <header>
+        <h2>Substitute (Download)</h2>
+      </header>
+      <p>Immutable Path &amp; Predictable Hash:</p>
+      <ol>
+        <li>Collect output checksums (trusted remote)</li>
+        <li>Download (untrusted remote / network)</li>
+        <li>Verify checksums &amp; signature</li>
+      </ol>
+      <p>Download from:</p>
+      <ul>
+        <li>Another computer</li>
+        <li>The web</li>
+        <li>A Peer-2-Peer network (maybe one day?)</li>
+      </ul>
+       <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="build" class="slide"><div>
+    <section>
+      <header>
+        <h2>Build</h2>
+      </header>
+      <ol>
+        <li>Delegate to a remote</li>
+        <li>Create a chroot</li>
+        <li>Mount dependencies in the chroot</li>
+        <li>Run the builder</li>
+        <li>Scan for references</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="download-done" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix: Managing dependencies</h2>
+      </header>
+      <p>Method:</p>
+      <ol>
+        <li class=done>Read &amp; Create a dependency graph</li>
+        <li class=done>Check for updates</li>
+        <li class=done>Download / Build the result</li>
+        <li>Replace existing files</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="install" class="slide"><div>
+    <section>
+      <header>
+        <h2>Install</h2>
+      </header>
+      <ol>
+        <li>Root the build result</li>
+        <li>Update a symbolic-link (atomic)</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="install-done" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nix: Managing dependencies</h2>
+      </header>
+      <p>Method:</p>
+      <ol>
+        <li class=done>Read &amp; Create a dependency graph</li>
+        <li class=done>Check for updates</li>
+        <li class=done>Download / Build the result</li>
+        <li class=done>Install new files</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
+
