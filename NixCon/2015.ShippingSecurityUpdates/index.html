@@ -1,0 +1,964 @@
+<!DOCTYPE HTML>
+<html lang="en-US" class="fade">
+<head>
+  <meta charset="UTF-8">
+  <title>Shipping Security Updates</title>
+
+<!--
+
+Ideas:
+ - Highlight the importance of security updates:
+   - Show the content of US-CERT bulletin (scary).
+   - Highlight security updates at Mozilla (chemspill).
+   - Evaluate our-self:
+     - Show the history of channel updates.
+       - Usually short time between evaluation to channel production
+       - This process might take days. (let's update bash / openssl)
+     - Show the ratio of packages built.
+       - Small channel: 43   .vs.  Normal channel: 35000
+
+ - Current solution that we have today:
+   - Use a small channel for server, and rebuild everything your-self.
+   - config.system.replaceRuntimeDependencies (pkgs.replaceDependency)
+     [graft-ing in Guix]
+     - Knowing the derivation implies evaluating it.
+     - (for each package) Iterate on the closure of runtime.
+     - Iterate through all dependencies without caution, even if it does not
+       depend
+
+ - Present how security updates work on mutation-based system.
+   - Show how to translate that to Nixpkgs. (Account for mutations as part
+     of the build process)
+   - Show the implicit / expected relation of mutation based system.
+   - Show how to translate such thing to nixpkgs.
+   - Saving runtime dependencies in Nix channels. (better than replaceRuntimeDependency)
+   - So 2 nixpkgs tree?
+
+ - Strategies to handle ABI compatible updates.
+   - One branch per release, handle ABI updates manually, create a new package on ABI imcompatible updates. (linuxPackages)
+   - Two branches per release:
+     - Handle ABI changes by rebasing.
+     - Handle ABI changes by merging.
+
+
+
+Plan:
+* Shipping Security Updates
+  (STS 61 - Shipping new parts for the hubble telescope)
+
+** Security
+
+*** Security issues?
+
+  Metasploit maker:
+    http://www.rapid7.com/db/modules/search?q=debian&t=v&utf8=%E2%9C%93
+
+  Searching Debian, because it is well known for caring about security
+  issues, and also to highlight free software that we are also packaging.
+
+
+  (US-CERT   https://search.us-cert.gov/search/news?affiliate=us-cert&channel=279&query=)
+
+*** Trust software makers?
+
+  - Do maintainers care about you?
+  - Are issues fixed quickly?
+  - Are fixes released quickly?
+
+  The answer is about the time-frame!
+
+{{{{
+*** Apollo 11?
+
+  https://www.hq.nasa.gov/alsj/a11/a11.1201-fm.html
+
+  (Does not stick to real speech)
+
+       Apollo 11               Huston                  MIT
+
+   1202 Alarm
+
+                    /What the hell is that?/
+                  Ok, ignore it, should be safe.
+
+              Get me the guy who made this computer,
+                 we don't take off with alarms
+
+                                                    How could the computer
+                                                    be overloaded?
+
+      (less than 24 hours later)
+
+                                                    Never happen in any of
+                                                    our tests.
+
+                                                    Oh, the radar was never
+                                                    plugged in during the
+                                                    test.
+
+                  Eagle, please switch the Radar
+                       to manual position
+
+}}}}
+
+*** Can you trust?
+
+  - Android?
+    - provided by Google?
+    - provided by phone manufacturer?
+  - Firefox?
+  - NixOS?
+
+*** Android Example
+
+  https://commons.wikimedia.org/wiki/File:Android_historical_version_distribution_-_vector.svg
+
+  {{
+    Author: Erikrespo (user on wikipedia.org)
+    This file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
+  }}
+
+*** Firefox Example
+
+  https://upload.wikimedia.org/wikipedia/fr/timeline/94091cb0eb3e17b0b7a98374c0499bfc.png
+
+  New release every 6 weeks.
+
+  Low security updates with usual updates, "chemspill" for big
+  usability/security issues.
+
+*** Exceptional?
+
+  Exceptional implies stress, stress implies mistakes:
+   - Typos.
+   - Copy & Pasta.
+
+*** Firefox Chemspill
+
+  Make a process to reduce mistakes and improve the speed.
+
+  For releasing firefox, we have a release process that we call a
+  "chemspill", which consists of making a release in addition to the 6 week
+  cycle.  Either for usability of for security issues.
+
+  http://www.aosabook.org/images/ffreleng/timeline.png
+
+*** NixOS Example
+
+  https://nixos.org/wiki/Security_Updates
+
+```
+  system.replaceRuntimeDependencies = with pkgs; [
+    ({ original = openssl;
+       replacement = callPackage /some/path/nixpkgs/pkgs/development/libraries/openssl {
+         fetchurl = fetchurlBoot;
+         cryptodevHeaders = linuxPackages.cryptodev.override {
+           fetchurl = fetchurlBoot;
+           onlyHeaders = true;
+         };
+       };
+    })
+  ];
+```
+
+*** Requirement.
+
+  - Security updates are the exception. (not the rule)
+  - User awareness.
+  - User actions.
+  - Same package name length.
+  - ABI compatible.
+
+*** Can we be trusted?
+
+    Yes-ish
+  which means
+      No
+
+** Shipping Quickly
+
+*** In Other Distributions
+
+  - Build a new program with the security update.
+  - Replace only the library / program which is affected by the security
+    updates.
+
+  - Forget to restart any program which loaded the library previously?
+
+*** In NixOS
+
+  - Changing core packages implies recompiling too much.
+    - A branch made for recompiling core packages, nothing else.
+
+  - Rebuild everything *your-self*:
+    - Only build what you need.
+    - Pray to don't have build issues.
+
+*** pkgs.replaceDependency
+
+  Subsitute one package reference by another, in the closure of a package
+  realization. Make a new derivations with the substituted hashes.
+
+  Implies:
+  - Written manually. (do-it your-self)
+  - Evaluate runtime closure within a nix-expression.
+  + Only substitute when needed.
+
+  # - config.system.replaceRuntimeDependencies (pkgs.replaceDependency)
+  #   [graft-ing in Guix]
+  #   - Knowing the runtime dependencies implies evaluating it.
+  #   - (for each package) Iterate on the closure of runtime.
+  #   - Iterate through all dependencies without caution, even if it does not
+  #     depend
+
+*** One problem at a time
+
+  By order of importance:
+  - Make it transparent for Users.
+  - Make it fast for Hydra.
+  - Make it easy for Packagers.
+  - Only use rumtime dependencies, without realizing expressions.
+
+*** Transparent 0
+
+  ```
+   $ nix-channel --update
+   $ nix-env -u firefox
+   $ nix-env -Ai nixos.thunderbird
+  ```
+
+  Should become:
+
+  ```
+   $ nix-channel --update
+   $ nix-env -u firefox
+   $ nix-env -Ai nixos.thunderbird
+  ```
+
+*** Transparent 1
+
+  Using `overrideDrivation`?
+
+*** Fast 0
+
+  Changing `openssl` should only recompile `openssl`.
+
+  `overrideDrivation` does not work, as it replaces one package in all other
+  packages, unless you use a new name.
+
+  Using a different name will not work with "Transparent 0" axiom.
+
+  We could replace the original list of packages with the new one, compiled
+  based on the old list of dependencies.  Which implies having 2 lists of
+  packages.
+
+*** Fast 1
+
+  Changing `openssl` should only patch any package which depends(*) on
+  `openssl`, such as `python`.
+
+  Implies that the new list of packages is aware of the replaced packages.
+
+  (*) depends at runtime, but we would see that later.
+
+*** Transparent & Fast
+
+  {{ 3 stages diagram, with bash, openssl and python }}
+
+  Stage 1: Build packages, as of today.
+
+  Stage 2: Rebuild packages with security updates, based on stage 1 packages only.
+
+  Stage 3: Patch stage 2 packages, with their stage 2 dependencies (transitively).
+
+*** Easy -1
+
+  2 list of packages?
+
+  - One used for stage 1 (nixpkgs as of today)
+
+  - One for stage 2. (ABI compatible changes)
+
+*** Easy 0
+
+  Stage 1: Use <nixpkgs>.
+
+  Stage 2: Use <nixpkgs/quickfix>, for ABI compatible changes.
+
+  The directory nixpkgs/quickfix is only produced by merging 2 branches of
+  Nixpkgs.
+ 
+*** Easy 1
+
+  {{ Images of potential branching policies for cherry-picking ABI compatible updates }}
+
+*** Dependencies 0
+
+  Compile-time dependencies:
+  - eval only:   attribute  ->  drv
+
+```
+  { stdenv, libbaz }:
+
+  ...
+```
+
+  Over approximate compile-time dependencies: `[ stdenv libbaz ]`
+
+*** Dependencies 1
+
+  Runtime dependencies:
+  - Require nix-store realizations.
+  - Query closure dependencies.
+  - Could be done by Hydra.  \o/
+
+  Summarize dependencies:
+  ```
+    { libbaz = true;
+      stdenv = {
+        gcc = true;
+      };
+    }
+  ```
+
+*** Dependencies 2
+
+  Generate the nixpkgs channel:
+    <nixpkgs/quickfix>: abi-compatible changes.
+    <nixpkgs/runtime>: runtime dependencies.
+
+** Conclusion
+
+
+
+
+
+sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
+
+-->
+
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>Shipping Security Updates</h1>
+    <p class="footer">
+      Nicolas B. Pierron
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong>
+
+In the Internet era, we have to ship security updates in a matter of hours.  The way we manage security updates today does not scale, and it is bound by a critical path. In order to reduce, the round-trip, we deliberately excluded most of the packages.
+
+This presentation introduces a new way to handle security updates, in a manner which can scale with the number of computer in the buildfarm.  Thus delivering updates as fast as each project can re-compile.
+
+    </p>
+  </aside>
+
+
+  <div id="cover" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2 style="text-align: center;">Shipping Security Updates</h2>
+      </header>
+      <img src="img/1993_sts61_liftoff.jpg"
+           class="middle shadow" width="100%" height="100%"
+           alt="">
+      <small class="byline">
+        Nicolas B. Pierron<br>
+        NixCon 2015
+      </small>
+      <footer class="notes">
+        <p>Hi,
+
+        Today we are going to talk about shipping security updates.</p>
+        
+        <p>NASA - STS 61 - Shipping new parts for the hubble telescope</p>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="sec-matters" class="slide"><div>
+    <section>
+      <header>
+        <h2>Security Matters</h2>
+      </header>
+      <p>Exploits don't wait for updates:</p>
+      <ul>
+        <li>Metasploit: <a href="http://www.rapid7.com/db/modules/search?q=debian&t=v&utf8=%E2%9C%93">http://www.rapid7.com/...</a></li>
+        <li>US-CERT: <a href="https://search.us-cert.gov/search/news?affiliate=us-cert&channel=279&query=">https://search.us-cert.gov/...</a></li>
+      </ul>
+      <footer class="notes">
+        <p>First of all, let us look at a few exploits from the last day.</p>
+        <p>These are scary, but here is the main question, can we rely on
+        these porjects?</p>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="trust-who" class="slide"><div>
+    <section>
+      <header>
+        <h2>Trust, Who?</h2>
+      </header>
+      <p>Can we even trust software makers?</p>
+      <ol>
+        <li>Do they care <strong>about you</strong>?</li>
+        <li>Are issues <strong>fixed</strong> quickly?</li>
+        <li>Are fixes <strong>released</strong> quickly?</li>
+      </ol>
+      <footer class="notes">
+        <p>The real question is, can we trust open source projects?</p>
+        <p>Trust is likely to be a function of the time needed to get the
+        issue fixed on your computer.  Which implies that fixes are made and
+        shipped.</p>
+        <p>(Low latency, high throughput)</p>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="trust-example" class="slide"><div>
+    <section>
+      <header>
+        <h2>Examples</h2>
+      </header>
+      <ol>
+        <li>Android?</li>
+        <li>Firefox?</li>
+        <li>NixOS?</li>
+      </ol>
+      <footer class="notes">
+        <p>So let's see a few examples.</p>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="android-example" class="slide"><div>
+    <section>
+      <header>
+        <h2>Android Example</h2>
+      </header>
+      <img class="middle" width="90%" src="img/Android_historical_version_distribution_-_vector.svg">
+      <footer class="notes">
+        <p>Ok, Andoird. This graph represent the Android API versions which
+          are tied to major and minor versions of Android.</p>
+        <p>First, let's focus on the bottom on this figure.  We see that the
+          Android developpers are making quite a lot of release.  What is not
+          shown is the fact that they have multiple "patch" version with the
+          same API.  Also, after 3.0, they made no more fixes to old
+          versions.  This that if you have an Android phone, then you are
+          probably safe if you follow the latest version.</p>
+        <p>Now, let's look at the rest of the graph.  This graph represents
+          the percent of which versions at a given date. As we see they are
+          a lot of phones which are lagging behind.  This means, that as of
+          today 90% of the Android phones are running versions which are no
+          longer receiving security updates.</p>
+        <p>The problem here is related to the fact that network operators,
+          and phone manufacturers have to pay to get each version validated.
+          This validation process takes months and cost a lot.  Thus when
+          facing the choice of updating software, they prefer to let user use
+          old version instead of making updates.</p>
+        <p>Thus, can probably you trust the Android developers, but probably
+          not the phone manufacturers for releasing the security issue
+          fixes.</p>
+        <pre>
+          https://commons.wikimedia.org/wiki/File:Android_historical_version_distribution_-_vector.svg
+          Author: Erikrespo (user on wikipedia.org)
+          This file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="firefox-example" class="slide"><div>
+    <section>
+      <header>
+        <h2>Firefox Example</h2>
+      </header>
+      <img class="middle" width="95%" src="img/firefox-releases.png">
+      <footer class="notes">
+        <p>Ok, let's look at Firefox now.</p>
+        <p>As we can see in this graph of Firefox releases, we see that
+          Firefox releases about 10 major versions per year, and about 20
+          "patch" releases.</p>
+        <p>One of the question we might ask, is how do they manage to do so
+          many "patch" releases?</p>
+        <pre>
+          https://fr.wikipedia.org/wiki/Historique_des_sorties_de_Mozilla_Firefox
+          This generated file is licensed under the Creative Commons
+          Attribution-Share Alike 3.0 Unported license.
+          </pre>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="making-updates" class="slide"><div>
+    <section>
+      <header>
+        <h2>Making Security Updates</h2>
+      </header>
+      <p>Exceptional implies stress, stress implies mistakes:</p>
+      <ul>
+        <li>Typos.</li>
+        <li>Copy & Pasta.</li>
+      </ul>
+      <footer class="notes">
+        <p>If you want to make security updates, you want to avoid having to
+          do it as something which differs from your normal release
+          process.  Otherwise, this would probably means that this is an
+          exceptional case, and as it is exceptional you might not realize
+          that a typo slips into your updates, or slide.</p>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="firefox-chemspill" class="slide"><div>
+    <section>
+      <header>
+        <h2>Chemspill</h2>
+      </header>
+      <img class="right" src="img/mozilla_chem_spill.png">
+      <p>Make a process</p>
+      <ul>
+        <li>Reduce mistakes.</li>
+        <li>Improve the speed.</li>
+      </ul>
+      <footer class="notes">
+        <p>The way Mozilla do is that they have a release process that we
+          call "chemspill" for "chemical spillage". The idea of having such
+          process is to make sure that we can do things with a minimum of
+          mistakes and makes sure that we don't spin while trying to find
+          what is the next thing to do.</p>
+        <pre>
+        Illustration made by Hervé Renault[1] base on one made by lisaamybeth[2].
+        [1] https://twitter.com/HerveRenault
+        [2] https://openclipart.org/detail/152197/chemical-symbol
+        </pre>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="firefox-chemspill-timeline" class="slide"><div>
+    <section>
+      <header>
+        <h2>Chemspill Timeline</h2>
+      </header>
+      <img class="middle" width="95%" src="img/chemspill-timeline.png">
+      <footer class="notes">
+        <p>This graph highlights how buildds are going and how they are
+          released to Firefox users. So, as Mozilla is able to provide
+          frequent fixes, they are also capable of releasing these within a
+          few hours to Linux users, and within a day to windows users.</p>
+        <p>So, let's look how we propose to release updates of sofware such
+          as Firefox</p>
+        <pre>
+          http://www.aosabook.org/en/ffreleng.html
+          This work is made available under the Creative Commons Attribution
+          3.0 Unported license.
+        </pre>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="how-do-we-ship-today" class="slide"><div>
+    <section>
+      <header>
+        <h2>NixOS Example</h2>
+      </header>
+      <p>Suggested ways:</p>
+      <ul>
+        <!-- <li>Rebuild critical path.</li> -->
+        <li>Default channel: Long critical path. (when it builds)</li>
+        <li>Small channel: small ciritcal path (with local rebuilds).</li>
+        <li>Do it yourself <code>pkgs.replaceDependency</code> or
+        <code>system.replaceRuntimeDependencies</code>.</li>
+      </ul>
+      <footer class="notes">
+        <p>So far, we have multiple ways to handle such releases.</p>
+        <pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="nixos-example" class="slide"><div>
+    <section>
+      <header>
+        <h2>NixOS Example</h2>
+      </header>
+      <p>Dear user, please proceed as follow:</p>
+      <pre style="font-size:0.7em;left:45px;position:absolute;"><code>system.replaceRuntimeDependencies = with pkgs; [
+  ({ original = openssl;
+     replacement = callPackage /some/path/nixpkgs/pkgs/development/libraries/openssl {
+       fetchurl = fetchurlBoot;
+       cryptodevHeaders = linuxPackages.cryptodev.override {
+         fetchurl = fetchurlBoot;
+         onlyHeaders = true;
+       };
+     };
+  })
+];</code></pre>
+      <footer class="notes">
+        <p>.</p>
+        <pre>
+        https://nixos.org/wiki/Security_Updates
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="nixos-requirements" class="slide"><div>
+    <section>
+      <header>
+        <h2>NixOS Requirements</h2>
+      </header>
+      <p>Require:</p>
+      <ul>
+        <li>User awareness.</li>
+        <li>User actions.</li>
+        <li>ABI compatible versions.</li>
+        <li>Security updates are the exception. (not the rule)</li>
+      </ul>
+      <p>Otherwise: Normal updates are shipped in a month.</p>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="nixos-trust" class="slide"><div>
+    <section>
+      <header>
+        <h2>Trust NixOS?</h2>
+      </header>
+      <img class="right" width="50%" src="img/Heartbleed.svg">
+      <p style="text-align: center; margin-top: 7em;">Yes-ish<br>which means<br>No</p>
+      <footer class="notes"><pre>
+        http://heartbleed.com/
+        Heartbleed logo is free to use, rights waived via <a href="http://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="world-of-tomorrow" class="slide"><div>
+    <section>
+      <header>
+        <h2>Security Issues</h2>
+      </header>
+      <img src="img/futurama_world_of_tomorrow.jpg" style="margin-bottom:3em;">
+      <img src="img/suicide-booth.jpg">
+      <footer class="notes"><pre>
+        Futurama
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <!--
+  <div id="but-how-others-do" class="slide"><div>
+    <section>
+      <header>
+        <h2>Other Distributions</h2>
+      </header>
+      <p>How do others do:</p>
+      <ul>
+        <li>Rely on shared libraries.</li>
+        <li>Update <strong>only faulty</strong> packages.</li>
+        <li>Do not necessary restart jobs.</li>
+      </ul>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="how-do-we-ship-today" class="slide"><div>
+    <section>
+      <header>
+        <h2>Shipping Nixpkgs</h2>
+      </header>
+      <p>Suggested ways:</p>
+      <ul>
+        <li>Rebuild critical path.</li>
+        <li>Default channel: Long critical path. (when it builds)</li>
+        <li>Small channel: small ciritcal path (with local rebuilds).</li>
+        <li>Get your hands dirty with <code>pkgs.replaceDependency</code>.</li>
+      </ul>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+  -->
+
+  <div id="grmbl-replaceDependency" class="slide"><div>
+    <section>
+      <header>
+        <h2>pkgs.replaceDependency</h2>
+      </header>
+      <p>Substitute references inside package outputs:</p>
+      <ul>
+        <li>Maintained by hand.</li>
+        <li>Realize packages during the evaluation.</li>
+        <li>Realize the packages to apply the fixes.</li>
+        <li>Lack support for statically linked packages.</li>
+        <!--
+        <li>Do not distinguish sources of hashes.</li>
+        -->
+      </ul>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="one-problem-at-a-time" class="slide"><div>
+    <section>
+      <header>
+        <h2>One problem at a time</h2>
+      </header>
+      <p>By order of importance:</p>
+      <ol>
+        <li>Make it <strong>transparent</strong> for users.</li>
+        <li>Make it <strong>fast</strong> for Hydra.</li>
+        <li>Make it <strong>easy</strong> for package managers.</li>
+        <li>Make it <strong>sane</strong>. (no build during evaluation)</li>
+      </ol>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="transpartent-0" class="slide"><div>
+    <section>
+      <header>
+        <h2>Transparent</h2>
+      </header>
+      <pre><code>$ nix-channel --update
+$ nix-env -u firefox
+      </code></pre>
+      <p>Should become:</p>
+      <pre><code>$ nix-channel --update
+$ nix-env -u firefox</code></pre>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="transpartent-1" class="slide"><div>
+    <section>
+      <header>
+        <h2>Transparent (Ideal)</h2>
+      </header>
+      <pre><code>$ nix-channel --update
+$ nix-env -u firefox
+      </code></pre>
+      <p>Should become:</p>
+      <pre><code>
+      </code></pre>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="implies-0" class="slide"><div>
+    <section>
+      <header>
+        <h2>Implicitcations</h2>
+      </header>
+      <ul>
+        <li>Fixed packages should have the same layout as Nixpkgs.</li>
+      </ul>
+      <img class="middle" width="90%" style="padding-top:350px;" src="img/nixpkgs-loop.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="fast-0" class="slide"><div>
+    <section>
+      <header>
+        <h2>Fast</h2>
+      </header>
+      <p>Break the critical path in parallel compilation.</p>
+      <p>Do not recompile when a dependency change.</p>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="fast-1" class="slide"><div>
+    <section>
+      <header>
+        <h2>Fast &amp; Sane</h2>
+      </header>
+      <img class="middle" width="90%" src="img/abifixpkgs-2.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="implies-loop-repeat" class="slide"><div>
+    <section>
+      <header>
+        <h2>Implicitcations</h2>
+      </header>
+      <p>Generate the same set of packages.</p>
+      <img class="middle" width="90%" src="img/nixpkgs-loop-repeat.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="implies-loop-plus-one" class="slide"><div>
+    <section>
+      <header>
+        <h2>Implicitcations</h2>
+      </header>
+      <p>Generate the same set of packages with one extra no-op iteration.</p>
+      <img class="middle" width="90%" src="img/nixpkgs-loop-plus-one.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="implies-loop-quickfix" class="slide"><div>
+    <section>
+      <header>
+        <h2>Implicitcations</h2>
+      </header>
+      <p>Recompile fixed packages based on fixpoint of stable packages.</p>
+      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="implies-loop-quickfix-twice" class="slide"><div>
+    <section>
+      <header>
+        <h2>Implicitcations</h2>
+      </header>
+      <p>Partially recompile fixed packages based on fixed packages.</p>
+      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix-twice.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="implies-loop-quickfix-recompile" class="slide"><div>
+    <section>
+      <header>
+        <h2>Implicitcations</h2>
+      </header>
+      <p>Entirelly recompile fixed packages based on fixed packages.</p>
+      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix-recompile.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <!--
+  <div id="implies-loop-quickfix-patch" class="slide"><div>
+    <section>
+      <header>
+        <h2>Implicitcations</h2>
+      </header>
+      <p>Use the recompiled-info as a hint for patching with dependencies.</p>
+      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix-patch.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+  -->
+
+  <div id="implies-loop-quickfix-whatif-patch" class="slide"><div>
+    <section>
+      <header>
+        <h2>Implicitcations</h2>
+      </header>
+      <p>Use the recompiled-info as a hint for patching with dependencies.</p>
+      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix-whatif-patch.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="easy-0" class="slide"><div>
+    <section>
+      <header>
+        <h2>Easy</h2>
+      </header>
+      <p>3 lists of packages:</p>
+      <ul>
+        <li>Latest compiled branch.</li>
+        <li>ABI compatible changes branch.</li>
+        <li>Security channel. (merges both)</li>
+      </ul>
+      <img class="middle" width="90%" style="padding-left:900px;" src="img/nixpkgs-loop-quickfix.svg">
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="release-management" class="slide"><div>
+    <section>
+      <header>
+        <h2>Release Management</h2>
+      </header>
+      <p>Packagers options:</p>
+      <ul>
+        <li>Push to master &amp; Cherry-pick ABI compatible changes.</li>
+        <li>Push to ABI changes &amp; Cherry-pick in master.</li>
+      </ul>
+      <p>On new stable channel update:</p>
+      <ul>
+        <li>Merge master into the ABI branch.</li>
+        <li>Reset the ABI branch.</li>
+      </ul>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+<!-- sane? -->
+
+  <div id="remaining-issues" class="slide"><div>
+    <section>
+      <header>
+        <h2>Remaining Issues</h2>
+      </header>
+      <p>What is left for improvements:</p>
+      <ul>
+        <li>Automated updates for registered packages.</li>
+        <li>Support for statically linked packages.</li>
+        <!--
+        <li>Distinguish sources of hashes.</li>
+        -->
+      </ul>
+      <footer class="notes"><pre>
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <div id="the-end" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2 style="text-align: center;">Questions?</h2>
+      </header>
+      <img src="img/STS-31_Hubble_launch_roll_and_pitch.jpg"
+           class="middle shadow" height="100%"
+           alt="">
+      <footer class="notes"><pre>
+          NASA - STS-31 - Hubble launch.
+      </pre></footer>
+    </section>
+  </div></div>
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
+
