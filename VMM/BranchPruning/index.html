@@ -1,0 +1,811 @@
+<!DOCTYPE HTML>
+<html lang="en-US" class="">
+<!-- 
+  ^ a class of "fade" makes slides fade smoothly into one another
+  ^ a class of "nonumbers" will remove slide numbers.
+ -->
+<head>
+  <meta charset="UTF-8">
+  <title>Branch Pruning</title>
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="themes/mozilla/styles/style.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>Branch Pruning</h1>
+    <p class="footer">
+      Nicolas B. Pierron [:nbp]
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong> Branch Pruning is a method compiler
+      optimization which is similar to PGO optimization of static compilers.
+      This optimization provide little improvements on its own, but removes
+      unused block which might disturb other optimizations.
+    </p>
+  </aside>
+  <script>
+    window.innerNavigation = [];
+  </script>
+
+  <div id="meta-cover" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2>Branch Pruning</h2>
+      </header>
+      <img src="pictures/branch-pruning.jpg" 
+           class="middle shadow" height="600"
+           alt="IonMonkey poster">
+      <small class="byline">
+        Nicolas B. Pierron [:nbp]<br>
+        VMM '2016 - Lugano
+      </small>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+  <div id="meta-plan" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>Context</li>
+        <li>Motivation</li>
+        <li>Branch Pruning</li>
+        <li>Results</li>
+        <li>Future Works</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <!--
+  <div id="context" class="slide"><div>
+    <section>
+      <header>
+        <h2>Context</h2>
+      </header>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <div id="c-firefox" class="slide"><div>
+    <section>
+      <header>
+        <h2>SpiderMonkey</h2>
+      </header>
+      <object id="c-firefox-svg" type="image/svg+xml" data="pictures/SpiderMonkey.svg" class="myM" height="500"></object>
+      <footer class="notes">
+        Currently Firefox has a JavaScript engine which has 4 evaluation
+        methods: an interpreter, a baseline JIT compiler, an optimizing JIT
+        compiler, and an AOT compiler.
+
+        All compilers are method compilers.  We used to have a Tracing JIT
+        compiler, but we removed it early in 2012.
+      </footer>
+      <script>
+        (function () {
+          var state = 0, nb = 3;
+          var toplevel = null, codenames, jitaot;
+          window.innerNavigation["c-firefox"] = function() {
+            if (!toplevel) {
+              var doc = document.getElementById("c-firefox-svg").contentDocument;
+              for (var g of doc.getElementsByTagName("g")) {
+                switch (g.getAttribute("inkscape:label")) {
+                  case "SpiderMonkey Components": toplevel = g; break;
+                  case "SpiderMonkey Codenames": codenames = g; break;
+                  case "SpiderMonkey Jit-and-Aot": jitaot = g; break;
+                }
+              }
+            }
+            state = (state + 1) % nb;
+            switch (state) {
+              case 0:
+                codenames.setAttribute("style", "display:none");
+                jitaot.setAttribute("style", "display:none");
+                break;
+              case 1:
+                jitaot.setAttribute("style", "display:visible");
+                break;
+              case 2:
+                codenames.setAttribute("style", "display:visible");
+                jitaot.setAttribute("style", "display:none");
+                break;
+            }
+            return state == 0 ? -1 : state;
+          }
+        })()
+      </script>
+    </section>
+  </div></div>
+
+  <div id="c-lib" class="slide"><div>
+    <section>
+      <header>
+        <h2>Libraries</h2>
+      </header>
+      <ul>
+        <li>ECMAScript standard library</li>
+        <li>JQuery</li>
+        <li>React</li>
+        <li>…</li>
+      </ul>
+      <footer class="notes">
+        The web is full of libraries, and many versions of these libraries
+        exists. Some code are generated (gmail, gdoc, ...). And not a lot of the
+        code is used.
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+  <div id="c-lazy-fun" class="slide"><div>
+    <section>
+      <header>
+        <h2>Lazy Functions</h2>
+      </header>
+      <footer class="notes">
+        Today, we already have a mechanism which only compile function, when
+        they are used.  Otherwise, we only need to check for the syntax to
+        report errors and then keep the source around, and not even generate
+        bytecode.
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <div id="motivation" class="slide"><div>
+    <section>
+      <header>
+        <h2>Motivation</h2>
+      </header>
+      <ul>
+        <li>Remove unused/unlikely branches.</li>
+        <li>Use content code as guard.</li>
+        <li>Improve (Alias / Escape) Analysis results.</li>
+      </ul>
+      <footer class="notes">
+        Around the same time, I added code covergae for the JavaScript code,
+        which was made to be used for our infrastructure, and not for
+        optimizations, as most of the UI of Firefox is implemented in JS.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="m-lib" class="slide"><div>
+    <section>
+      <header>
+        <h2>Libraries</h2>
+      </header>
+      <pre>
+        <span class="comment">// ES6, 22.1.5.2.1</span>
+        function ArrayIteratorNext() {
+          if (!IsObject(this) || !IsArrayIterator(this)) {
+            <span class="important">return</span> callFunction(CallArrayIteratorMethodIfWrapped,
+                                this, "ArrayIteratorNext");
+          }
+          var result = { value: undefined, done: false };
+          …
+          <span class="important">return</span> result;
+        }
+      </pre>
+      <footer class="notes">
+        Even within functions, some code is not used.
+
+        TODO: Collect numbers, on the number of basic blocks which have already
+        been visited when we are starting a compilation.
+
+        These branches are made to handle cases, which are either not frequent
+        or not relevant for the code that we are running.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="branch-pruning" class="slide"><div>
+    <section>
+      <header>
+        <h2>Branch Pruning</h2>
+      </header>
+      <object id="bp-branch-pruning-svg" type="image/svg+xml" data="pictures/cfg-graph.svg" class="myM" height="500"></object>
+      <script>
+        document.addEventListener('load', () => {
+          var elem = document.getElementById("bp-branch-pruning-svg")
+          elem.addEventListener('load', () => {
+            var doc = elem.contentDocument;
+              for (var g of doc.getElementsByTagName("g")) {
+                switch (g.getAttribute("inkscape:label")) {
+                  case null: break;
+                  case "graph": case "arrows":  case "hotness":
+                  case "arrows-5": case "arrows-7": case "arrows-8": case "arrows-10":
+                    g.setAttribute("style", "display:visible"); break;
+                  default:
+                    g.setAttribute("style", "display:none"); break;
+                }
+              }
+          }, { once: true });
+        }, { once: true });
+      </script>
+      <footer class="notes">
+        Branch Pruning optimization is similar to classical PGO optimizations of
+        static compilers, except that instead of moving cold branches based on
+        their frequencies, we just remove them from the control-flow graph.
+
+        This is also similar to what trace compilation is doing, except that
+        instead of compiling on hits, we record hits, and based on some
+        heuristics we discard branches which have no hits.
+
+        We have multiple points to look at:
+        - What are the bailouts.
+        - Heuristics, how do we decide which block has to be removed or not.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="bp-bailouts-0" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bailouts</h2>
+      </header>
+      <object type="image/svg+xml" data="pictures/cfg-resume-points-def.svg" class="myM" height="500"></object>
+      <footer class="notes">
+        This is how a random Control flow graph would look like if we emphasize
+        the resume point in the graph.  On the left, you have the optimized
+        control flow graph (IonMonkey), and on the right, the non-optimized one
+        (Baseline)
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="bp-bailouts-1" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bailouts</h2>
+      </header>
+      <object type="image/svg+xml" data="pictures/cfg-resume-points-details.svg" class="myM" height="500"></object>
+      <footer class="notes">
+        If we go deeper into the graph, then we can see that a resume point is
+        somewhat similar to a definition inside the control flow graph which
+        captures a vector of definitions, which are used to map back into a
+        baseline frame.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="bp-bailouts-2" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bailouts</h2>
+      </header>
+      <object type="image/svg+xml" data="pictures/cfg-recover-instruction-build.svg" class="myM" height="500"></object>
+      <footer class="notes">
+        In practice, we have some complex machinery for interpreting the content
+        of the resume point, to do our deoptimizations.  This involves mapping
+        all registers needed for reconstructing a frame, and executing
+        instructions that results were expected, but not done by IonMonkey, our
+        optimizing compiler.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="bp-bailouts-3" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bailouts</h2>
+      </header>
+      <p>Acceptable, If and only if:</p>
+      <ul>
+        <li>Low Frequency</li>
+        <li>Temporary</li>
+      </ul>
+      <p>We would need some heuristics.</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="bp-analysis-0" class="slide"><div>
+    <section>
+      <header>
+        <h2>Analysis</h2>
+      </header>
+      <!--
+      <pre><code>
+          for b in reverse-post-order(graph.blocks):
+            if b.isEntryPoint():
+              continue
+
+            b.unreachable = b.predecessors.all(|p|
+              (b.isLoopHeader && p == b.backedge) ||
+              p.unreachable || p.shouldBailout
+            )
+    
+            […]
+      </code></pre>
+      -->
+      <object id="bp-analysis-0-svg" type="image/svg+xml" data="pictures/cfg-graph.svg" class="myL" height="500"></object>
+      <div  class="myR" style="width:35%">
+        <ul>
+          <li>Unreachable
+            <ul>
+              <li id="unreachable-0">Ignore backedges</li>
+            </ul>
+          </li>
+          <li>Should Bailout
+            <ul>
+              <li id="shd-bail-0">Not entry/OSR block</li>
+              <li id="shd-bail-1">Predecessor is hot.</li>
+              <li id="shd-bail-5">Has some alias set.</li>
+              <li id="shd-bail-7">Number of dominated instructions / blocks.</li>
+              <li id="shd-bail-14">A return is cheaper than a bailout.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <script>
+        // Initialize the svg to its default position.
+        document.addEventListener('load', () => {
+          var elem = document.getElementById("bp-analysis-0-svg")
+          elem.addEventListener('load', () => {
+            var doc = elem.contentDocument;
+              for (var g of doc.getElementsByTagName("g")) {
+                switch (g.getAttribute("inkscape:label")) {
+                  case null: break;
+                  case "graph": case "arrows":  case "hotness":  case "numbers": case "analysis":
+                  case "arrows-5": case "arrows-7": case "arrows-8": case "arrows-10":
+                    g.setAttribute("style", "display:visible"); break;
+                  default:
+                    g.setAttribute("style", "display:none"); break;
+                }
+              }
+          }, { once: true });
+          var unreachable = [ document.getElementById("unreachable-0") ];
+          var shouldBailout = [ document.getElementById("shd-bail-0"),
+                document.getElementById("shd-bail-1"),
+                document.getElementById("shd-bail-5"),
+                document.getElementById("shd-bail-7"),
+                document.getElementById("shd-bail-14") ];
+          for (var n of unreachable)
+            n.setAttribute("style", "display:none");
+          for (var n of shouldBailout)
+            n.setAttribute("style", "display:none");
+        }, { once: true });
+        // Incremental steps through the analysis.
+        (function () {
+          var state = 0, nb = 16;
+          var analysis = [], unreachable = [], shouldBailout = [];
+          window.innerNavigation["bp-analysis-0"] = function() {
+            if (analysis.length == 0) {
+              var doc = document.getElementById("bp-analysis-0-svg").contentDocument;
+              for (var g of doc.getElementsByTagName("g")) {
+                switch (g.getAttribute("inkscape:label")) {
+                  case "analysis-0": analysis[0] = g; break;
+                  case "analysis-1": analysis[1] = g; break;
+                  case "analysis-2": analysis[2] = g; break;
+                  case "analysis-3": analysis[3] = g; break;
+                  case "analysis-4": analysis[4] = g; break;
+                  case "analysis-5": analysis[5] = g; break;
+                  case "analysis-6": analysis[6] = g; break;
+                  case "analysis-7": analysis[7] = g; break;
+                  case "analysis-8": analysis[8] = g; break;
+                  case "analysis-9": analysis[9] = g; break;
+                  case "analysis-10": analysis[10] = g; break;
+                  case "analysis-11": analysis[11] = g; break;
+                  case "analysis-12": analysis[12] = g; break;
+                  case "analysis-13": analysis[13] = g; break;
+                  case "analysis-14": analysis[14] = g; break;
+                  case "analysis": topAnalysis = g; break;
+                }
+              }
+              unreachable = [ , , , document.getElementById("unreachable-0") ];
+              shouldBailout = [ document.getElementById("shd-bail-0"),
+                document.getElementById("shd-bail-1"), , , ,
+                document.getElementById("shd-bail-5"), ,
+                document.getElementById("shd-bail-7"), , , , , , ,
+                document.getElementById("shd-bail-14") ];
+            }
+            state = (state + 1) % nb;
+            switch (state) {
+              case 0:
+                for (var n of analysis)
+                  n.setAttribute("style", "display:none");
+                for (var n of unreachable) {
+                  if (n) n.setAttribute("style", "display:none");
+                }
+                for (var n of shouldBailout) {
+                  if (n) n.setAttribute("style", "display:none");
+                }
+                break;
+              case 1:
+              case 2:
+              case 3:
+              case 4:
+              case 5:
+              case 6:
+              case 7:
+              case 8:
+              case 9:
+              case 10:
+              case 11:
+              case 12:
+              case 13:
+              case 14:
+              case 15:
+                analysis[state - 1].setAttribute("style", "display:visible");
+                if (unreachable[state - 1]) unreachable[state - 1].setAttribute("style", "display:visible");
+                if (shouldBailout[state - 1]) shouldBailout[state - 1].setAttribute("style", "display:visible");
+                break;
+            }
+            return state == 0 ? -1 : state;
+          }
+        })()
+      </script>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+  <div id="bp-algo-analysis-2" class="slide"><div>
+    <section>
+      <header>
+        <h2>Analysis (2)</h2>
+      </header>
+      <pre><code>
+            […]
+    
+            if !b.unreachable:
+              b.shouldBailout = heuristics(...)
+    
+            if b.isLoopHeader && (b.unreachable || b.shouldBailout):
+              b.backedge.shouldBailout = true
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <!--
+  <div id="bp-heuristics" class="slide"><div>
+    <section>
+      <header>
+        <h2>Heuristics</h2>
+      </header>
+      <ul>
+        <li>Numbers of hits per predecessors</li>
+        <li>Instructions with non-empty AliasSet</li>
+        <li>Number of dominated instructions</li>
+        <li>Number of dominated blocks</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <div id="bp-interpreter-instrument" class="slide"><div>
+    <section>
+      <header>
+        <h2>Hit Counters</h2>
+      </header>
+      <object id="bp-interpreter-instrument-svg" type="image/svg+xml" data="pictures/SpiderMonkey.svg" class="myM" height="500"></object>
+      <script>
+        document.addEventListener('load', () => {
+          var elem = document.getElementById("bp-interpreter-instrument-svg")
+          elem.addEventListener('load', () => {
+            var doc = elem.contentDocument;
+              for (var g of doc.getElementsByTagName("g")) {
+                switch (g.getAttribute("inkscape:label")) {
+                  case null: break;
+                  case "SpiderMonkey Components": // case "SpiderMonkey Jit-and-Aot":
+                  case "counters":
+                    g.setAttribute("style", "display:visible"); break;
+                  default:
+                    g.setAttribute("style", "display:none"); break;
+                }
+              }
+          }, { once: true });
+        }, { once: true });
+      </script>
+      <footer class="notes">
+        Code coverage.
+        
+        We instrument the bytecode to count the entry of each basic blocks.
+        Then in the Baseline compiler we based the counter address inside the
+        code.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="bp-algo-removed-uses" class="slide"><div>
+    <section>
+      <header>
+        <h2>Removed Uses</h2>
+      </header>
+      <object id="bp-algo-removed-uses-svg" type="image/svg+xml" data="pictures/removed-uses.svg" class="myM" height="500"></object>
+      <script>
+        (function () {
+          var state = 0, nb = 3;
+          var toplevel = null, lhs, rhs;
+          window.innerNavigation["bp-algo-removed-uses"] = function() {
+            if (!toplevel) {
+              var doc = document.getElementById("bp-algo-removed-uses-svg").contentDocument;
+              for (var g of doc.getElementsByTagName("g")) {
+                switch (g.getAttribute("inkscape:label")) {
+                  case "graph": toplevel = g; break;
+                  case "remove-lhs": lhs = g; break;
+                  case "remove-rhs": rhs = g; break;
+                }
+              }
+            }
+            state = (state + 1) % nb;
+            switch (state) {
+              case 0:
+                lhs.setAttribute("style", "display:none");
+                rhs.setAttribute("style", "display:none");
+                break;
+              case 1:
+                lhs.setAttribute("style", "display:visible");
+                rhs.setAttribute("style", "display:none");
+                break;
+              case 2:
+                rhs.setAttribute("style", "display:visible");
+                lhs.setAttribute("style", "display:none");
+                break;
+            }
+            return state == 0 ? -1 : state;
+          }
+        })()
+      </script>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+  <div id="bp-remove-uses-bailouts" class="slide"><div>
+    <section>
+      <header>
+        <h2></h2>
+      </header>
+      <p>As we have to bailout, we have to track original instructions for
+      resume points.</p>
+      <pre><code>
+          for b in post-order(graph.blocks):
+            if b.unreachable || b.shouldBailout:
+              FlagAllOperandsAsHavingRemovedUses(b)
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <!--
+  <div id="bp-algo-remove-uses-1" class="slide"><div>
+    <section>
+      <header>
+        <h2>Remove Uses</h2>
+      </header>
+      <p>As we have to bailout, we have to track original instructions for
+      resume points.</p>
+      <pre><code>
+          for b in post-order(graph.blocks):
+            if b.unreachable || b.shouldBailout:
+              FlagAllOperandsAsHavingRemovedUses(b)
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <!--
+  <div id="bp-algo-remove-uses-2" class="slide"><div>
+    <section>
+      <header>
+        <h2>Remove Uses (2)</h2>
+      </header>
+      <p>As we have to bailout, we have to track original instructions for
+      resume points.</p>
+      <pre><code>
+        FlagAllOperandsAsHavingRemovedUses(block):
+          for ins in block.instructions:
+            for operand in ins.operands:
+              operand.useRemoved = true
+      
+          for rp in block.resumePoints:
+            for operand in rp.operands:
+              operand.useRemoved = true
+      
+          for succ in block.successors:
+            FlagPhiInputsAsHavingRemovedUses(block, succ)
+      </code></pre>
+      <footer class="notes">
+        As we might have to bailout, we have to keep the same semantic as the
+        original code.  The UseRemoved flag on instructions is used to keep
+        track of all the code which can no longer be mutated, as a mutation
+        might not be valid for the code path that we are going to remove.
+
+        The UseRemoved flag is used to either inhibit optimization, or move the
+        original instruction to the bailout code path instead of the generated
+        code.
+
+        So, as we are planning to remove the block given as argument, we have to
+        flag all operands as having removed uses.
+
+        Also, we are removing the outgoing edges of the current block, so we
+        should remove any data-flow coming out of the current block.
+
+        If the inputs of the Phi are not flagged as having removed uses, then
+        later compilation phase might optimize them out. The problem is that a
+        bailout will use this value and give it back to baseline, which will
+        then use the OptimizedOut magic value in a computation.
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <!--
+  <div id="bp-algo-remove-blocks" class="slide"><div>
+    <section>
+      <header>
+        <h2>Remove Blocks</h2>
+      </header>
+      <pre><code>
+          for b in post-order(graph.blocks):
+            if !b.unreachable && !b.shouldBailout:
+              continue
+
+            removeSuccessors(b)
+            if b.shouldBailout:
+              convertToBailingBlock(b)
+            if b.unreachable:
+              removeBlock(b)
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <div id="bp-algo-remove-blocks" class="slide"><div>
+    <section>
+      <header>
+        <h2>Remove Blocks</h2>
+      </header>
+      <object id="bp-algo-remove-blocks-svg" type="image/svg+xml" data="pictures/cfg-graph.svg" class="myM" height="500"></object>
+      <script>
+        // Initialize the svg to its default position.
+        document.addEventListener('load', () => {
+          var elem = document.getElementById("bp-algo-remove-blocks-svg")
+          elem.addEventListener('load', () => {
+            var doc = elem.contentDocument;
+              for (var g of doc.getElementsByTagName("g")) {
+                switch (g.getAttribute("inkscape:label")) {
+                  case null: break;
+                  case "graph": case "arrows":  case "numbers": case "analysis":
+                  case "arrows-5": case "arrows-7": case "arrows-8": case "arrows-10":
+                  case "analysis-0":
+                  case "analysis-1":
+                  case "analysis-2":
+                  case "analysis-3":
+                  case "analysis-4":
+                  case "analysis-5":
+                  case "analysis-6":
+                  case "analysis-7":
+                  case "analysis-8":
+                  case "analysis-9":
+                  case "analysis-10":
+                  case "analysis-11":
+                  case "analysis-12":
+                  case "analysis-13":
+                  case "analysis-14":
+                  case "analysis":
+                    g.setAttribute("style", "display:visible"); break;
+                  default:
+                    g.setAttribute("style", "display:none"); break;
+                }
+              }
+          }, { once: true });
+        }, { once: true });
+        // Incremental steps through the analysis.
+        (function () {
+          var state = 0, nb = 5;
+          var arrows = [];
+          window.innerNavigation["bp-algo-remove-blocks"] = function() {
+            if (arrows.length == 0) {
+              var doc = document.getElementById("bp-algo-remove-blocks-svg").contentDocument;
+              for (var g of doc.getElementsByTagName("g")) {
+                var label = g.getAttribute("inkscape:label")
+                switch (label) {
+                  case "arrows-5": case "arrows-7": case "arrows-8": case "arrows-10":
+                    arrows[label.replace("arrows-", "") | 0] = g;
+                    break;
+                }
+              }
+            }
+            state = (state + 1) % nb;
+            switch (state) {
+              case 0:
+                for (var n of arrows)
+                  if(n) n.setAttribute("style", "display:visible");
+                break;
+              case 1:
+                arrows[10].setAttribute("style", "display:none");
+                break;
+              case 2:
+                arrows[8].setAttribute("style", "display:none");
+                break;
+              case 3:
+                arrows[7].setAttribute("style", "display:none");
+                break;
+              case 4:
+                arrows[5].setAttribute("style", "display:none");
+                break;
+            }
+            return state == 0 ? -1 : state;
+          }
+        })()
+      </script>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="results" class="slide"><div>
+    <section>
+      <header>
+        <h2>Results</h2>
+      </header>
+      <!-- Include graphic about for-of benchmark -->
+      <ul>
+        <li>Improve other optimizations:
+          <ul>
+            <li>for-of (Scalar Replacement)</li>
+            <li>underscore uniq function (LICM)</li>
+          </ul>
+        </li>
+        <li>Reduce generated code (~23%)</li>
+      </ul>
+      <footer class="notes">
+        <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1229813#c36">Benchmark delta</a><br>
+        <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1209515#c16">Memory saving</a>
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+  <div id="future-works" class="slide"><div>
+    <section>
+      <header>
+        <h2>Future Works</h2>
+      </header>
+      <ul>
+        <li>Define "often".</li>
+        <li>Reduce compilation cost.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
