@@ -1,0 +1,354 @@
+<!DOCTYPE HTML>
+<html lang="en-US" class="fade">
+<head>
+  <meta charset="UTF-8">
+  <title>GDB is your best friend</title>
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="themes/mozilla/styles/style.css">
+  <link rel="stylesheet" type="text/css" href="styles/asciinema-player.css" />
+  <script>window.innerNavigation = [];</script>
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>GDB is your best friend</h1>
+    <p class="footer">
+      Nicolas B. Pierron [:nbp]
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong>
+        GDB is a wonderful tool, especially since they made it such that we can
+        script in a feature-full scripting language, and since they opened the
+        protocol for making remote gdb session possible.
+    </p>
+  </aside>
+
+  <div id="cover" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2>Your best friend?</h2>
+      </header>
+      <img src="pictures/archer.jpg" 
+           class="middle shadow" height="400"
+           alt="GDB mascot">
+      <small class="byline">
+        Nicolas B. Pierron [:nbp]<br>
+        December 2016
+      </small>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="head-line" class="slide"><div>
+    <section>
+      <header>
+        <h2>Toolset</h2>
+      </header>
+      <ul>
+        <li>GDB</li>
+        <li>Valgrind</li>
+        <li>RR</li>
+        <li>Python</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="lets-start" class="slide"><div>
+    <section>
+      <header>
+        <h2>Let's get started</h2>
+      </header>
+      <ul>
+        <li>gdb --args ...</li>
+        <li>mach run --debugger=gdb</li>
+      </ul>
+      <pre><code>
+(gdb) help &lt;command&gt;
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="move-forward" class="slide"><div>
+    <section>
+      <header>
+        <h2>Move forward</h2>
+      </header>
+      <ul>
+        <li>continue (c)</li>
+        <li>step (s)</li>
+        <li>next (n)</li>
+        <li>stepi (si)</li>
+        <li>nexti (ni)</li>
+        <li>finish (fin)</li>
+        <li>return</li>
+        <li>&#x23ce; (repeat the previous command)</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="stop-it" class="slide"><div>
+    <section>
+      <header>
+        <h2>Stop It!</h2>
+      </header>
+      <ul>
+        <li>break (b)</li>
+        <li>watch -l</li>
+        <li>awatch -l</li>
+
+        <li>command</li>
+        <li>condition (cond)</li>
+        <li>ignore</li>
+        <li>enable</li>
+        <li>disable</li>
+        <li>delete</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="printf-lovers" class="slide"><div>
+    <section>
+      <header>
+        <h2>Print</h2>
+      </header>
+      <ul>
+        <li>where &lt;n&gt; / backtrace (bt)</li>
+        <li>frame (f)</li>
+        <li>print (p)</li>
+        <li>dprintf</li>
+        <li>x /i $pc</li>
+        <li>x /32a $sp</li>
+        <li>display</li>
+        <li>C^x C^a</li>
+        <li>list (l)</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="gdb-demo" class="slide cover"><div>
+    <section>
+      <header>
+      </header>
+      <asciinema-player src="gdb-demo-record.json" preload=1 width="100%"
+      height="100%" speed=2></asciinema-player>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="valgrind-who" class="slide"><div>
+    <section>
+      <header>
+        <h2>Valgrind</h2>
+      </header><pre><code>        # valgrind terminal
+$ valgrind --smc-check=all-non-file --vgdb-error=0 …
+</code></pre><pre><code>        # gdb terminal
+(gdb) target remote | /bin/vgdb --pid=31505
+(gdb) …
+(gdb) monitor who_points_at &lt;address&gt; &lt;size&gt;
+(gdb) monitor leak_check
+      </code></pre>
+      <a href="http://cs.swan.ac.uk/~csoliver/ok-sat-library/internet_html/doc/doc/Valgrind/3.8.1/html/mc-manual.html#mc-manual.monitor-commands">Memcheck Documentation</a>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+  <div id="for-the-record" class="slide"><div>
+    <section>
+      <header>
+        <h2>Record &amp; Replay</h2>
+      </header><pre><code>
+$ MOZ_LOG=… rr record [-h] …
+
+$ rr -M replay -a
+$ rr replay -p &lt;pid&gt -g &lt;event-id&gt;
+
+$ rr replay
+(gdb) br exit
+      </code></pre><footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="moon-walk" class="slide"><div>
+    <section>
+      <header>
+        <h2>MoonWalk</h2>
+      </header>
+      <ul>
+        <li>reverse-continue (rc)</li>
+        <li>reverse-step (rs)</li>
+        <li>reverse-next (rn)</li>
+        <li>reverse-stepi (rsi)</li>
+        <li>reverse-nexti (rni)</li>
+        <li>reverse-finish</li>
+        <li>when-ticks</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="checkpoint" class="slide"><div>
+    <section>
+      <header>
+        <h2>Checkpoint</h2>
+      </header>
+      <ul>
+        <li>checkpoint</li>
+        <li>restart &lt;checkpoint-id&gt;</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="mechnical" class="slide"><div>
+    <section>
+      <header>
+        <h2>Mechanical</h2>
+      </header><pre width="45%" class="myL"><code>
+   # memory content
+(rr) p &lt;expression&gt;
+(rr) watch -l &lt;expression&gt;
+(rr) rc
+(rr) disable &lt;watch-point-id&gt;
+      </code></pre>
+<pre width="45%" class="myR"><code>
+   # registers
+(rr) reverse-stepi
+(rr) x /i $pc
+(rr) p $rax
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="python" class="slide"><div>
+    <section>
+      <header>
+        <h2>Python</h2>
+      </header><pre><code>(gdb) source foo.py</code></pre>
+      <ul>
+        <li>… Anything Python can do …</li>
+        <li>Pretty-printer</li>
+        <li>Create new commands</li>
+        <li>Evaluate expressions</li>
+        <li>Custom stack unwinder</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="iongraph-example-tool" class="slide"><div>
+    <section>
+      <header>
+        <h2>Iongraph example</h2>
+      </header>
+      <ol>
+        <li>IONFLAGS=logs firefox …</li>
+        <li>iongraph /tmp/ion.json</li>
+        <li>dot -Tpng …</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="iongraph-example-sm-logs" class="slide"><div>
+    <section>
+      <header>
+        <h2>C++ &amp; Python</h2>
+      </header>
+      <pre><code>mir-&gt;jsonSpewer().spewMIR(mir-&gt;graph());</code></pre>
+      <pre><code>def invoke(self, mirExpr, from_tty):
+    mir = gdb.parse_and_eval(mirExpr)
+    jsonSpewer = mir['gs_']['jsonSpewer_']
+    graph = mir['graph_']
+    gdb.parse_and_eval('(*(%s*)(%s)).spewMIR((%s)%s)' %
+        (jsonSpewer.type, jsonSpewer.address,
+         graph.type, graph,))
+  </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="iongraph-example-pipe" class="slide"><div>
+    <section>
+      <header>
+        <h2>Post-process logs</h2>
+      </header>
+      <pre><code>def displayMIRGraph(self, str):
+    i = subprocess.Popen([iongraph.value, …], …)
+    d = subprocess.Popen([dot.value, '-Tpng'], …)
+    i.stdin.write(str)
+    # … keep the essential …
+    output = d.communicate()[0]
+    </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="iongraph-example-result" class="slide"><div>
+    <section>
+      <header>
+        <h2>Python Commands</h2>
+      </header>
+      <pre><code>(rr) iongraph mir</code></pre>
+      <img src="./pictures/iongraph.png" height="60%" class="right"/>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="learn-more" class="slide"><div>
+    <section>
+      <header>
+        <h2>Learn More</h2>
+      </header>
+      <ul>
+        <li><a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/SpiderMonkey/Hacking_Tips">Hacking Tips on MDN</a></li>
+        <li><a href="http://cs.swan.ac.uk/~csoliver/ok-sat-library/internet_html/doc/doc/Valgrind/3.8.1/html/manual-core-adv.html#manual-core-adv.gdbserver-commandhandling">Valgrind Documentation</a></li>
+        <li><a href="https://sourceware.org/gdb/current/onlinedocs/gdb/index.html">GDB Documentation</a></li>
+        <li><a href="https://hg.mozilla.org/integration/mozilla-inbound/file/tip/js/src/gdb/mozilla">Python instrumentation of SpiderMonkey</a></li>
+        <li><a href="https://hg.mozilla.org/integration/mozilla-inbound/file/tip/python/gdbpp/gdbpp/">Python instrumentation of Gecko</a></li>
+      </ul>
+
+      <a href="https://people.mozilla.org/~npierron/gdb/index.html">https://people.mozilla.org/~npierron/gdb/</a>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+    
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/asciinema-player.js"></script>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
