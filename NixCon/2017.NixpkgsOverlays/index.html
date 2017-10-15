@@ -74,9 +74,8 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
     <p class="abstract">
       <strong>Abstract: </strong>
 
-In the Internet era, we have to ship security updates in a matter of hours.  The way we manage security updates today does not scale, and it is bound by a critical path. In order to reduce, the round-trip, we deliberately excluded most of the packages.
-
-This presentation introduces a new way to handle security updates, in a manner which can scale with the number of computer in the buildfarm.  Thus delivering updates as fast as each project can re-compile.
+      This presentation introduce Nixpkgs overlays, and show the do and don't of it. It then
+      describe how it is implemented, and examples of almost a year of overlays gave us.
 
     </p>
   </aside>
@@ -85,39 +84,32 @@ This presentation introduces a new way to handle security updates, in a manner w
   <div id="cover" class="slide cover h"><div>
     <section>
       <header>
-        <h2 style="text-align: center;">Shipping Security Updates</h2>
+        <h2 style="text-align: center;">Nixpkgs Overlays</h2>
       </header>
       <img src="img/1993_sts61_liftoff.jpg"
            class="middle shadow" width="100%" height="100%"
            alt="">
       <small class="byline">
         Nicolas B. Pierron<br>
-        NixCon 2015
+        NixCon 2017
       </small>
       <footer class="notes">
-        <p>Hi,
-
-        Today we are going to talk about shipping security updates.</p>
-        
-        <p>NASA - STS 61 - Shipping new parts for the hubble telescope</p>
       </footer>
     </section>
   </div></div>
 
-  <div id="sec-matters" class="slide"><div>
+  <div id="presentation" class="slide"><div>
     <section>
       <header>
-        <h2>Security Matters</h2>
+        <h2>This Presenetation</h2>
       </header>
-      <p>Exploits don't wait for updates:</p>
       <ul>
-        <li>Metasploit: <a href="http://www.rapid7.com/db/modules/search?q=debian&t=v&utf8=%E2%9C%93">http://www.rapid7.com/...</a></li>
-        <li>US-CERT: <a href="https://search.us-cert.gov/search/news?affiliate=us-cert&channel=279&query=">https://search.us-cert.gov/...</a></li>
+        <li>Why adding overlays?</li>
+        <li>How to use them?</li>
+        <li>How do they work?</li>
+        <li>What we do with them?</li>
       </ul>
       <footer class="notes">
-        <p>First of all, let us look at a few exploits from the last day.</p>
-        <p>These are scary, but here is the main question, can we rely on
-        these porjects?</p>
       </footer>
     </section>
   </div></div>
@@ -134,16 +126,6 @@ This presentation introduces a new way to handle security updates, in a manner w
         <li>Are fixes <strong>released</strong> quickly?</li>
       </ol>
       <footer class="notes">
-        <p>I am one of them, and I guess base on the number of bugs I
-        introduced in nightly versions of Firefox I cannot be trusted, if
-        we base our trust on the fact that a software is
-        bug-free. Hopefully we have a nice fuzzing team which makes sure
-        that none of the bug we introduce are shipped to users.</p>
-        <p>The real question is, can we trust open source projects?</p>
-        <p>Trust is likely to be a function of the time needed to get the
-        issue fixed on your computer.  Which implies that fixes are made and
-        shipped.</p>
-        <p>(Low latency, high throughput)</p>
       </footer>
     </section>
   </div></div>
@@ -159,11 +141,6 @@ This presentation introduces a new way to handle security updates, in a manner w
         <li>NixOS?</li>
       </ol>
       <footer class="notes">
-        <p>So let's see a few examples.</p>
-        <p>We have Android, which is an OS in it-self and which is shipped
-          by a few companies.</p>
-        <p>On the other hand we have Firefox, and it is distributed by
-          Mozilla and also by Linux distributions such as NixOS.</p>
       </footer>
     </section>
   </div></div>
@@ -175,32 +152,7 @@ This presentation introduces a new way to handle security updates, in a manner w
       </header>
       <img class="middle" width="90%" src="img/Android_historical_version_distribution_-_vector.svg">
       <footer class="notes">
-        <p>Ok, Andoird. This graph represent the Android API versions which
-          are tied to major and minor versions of Android.</p>
-        <p>First, let's focus on the bottom on this figure.  We see that the
-          Android developpers are making quite a lot of release.  What is not
-          shown is the fact that they have multiple "patch" version with the
-          same API.  Also, after 3.0, they made no more fixes to old
-          versions.  This that if you have an Android phone, then you are
-          probably safe if you follow the latest version.</p>
-        <p>Now, let's look at the rest of the graph.  This graph represents
-          the percent of which versions at a given date. As we see they are
-          a lot of phones which are lagging behind.  This means, that as of
-          today 90% of the Android phones are running versions which are no
-          longer receiving security updates.</p>
-        <p>The problem here is related to the fact that network operators,
-          and phone manufacturers have to pay to get each version validated.
-          This validation process takes months and cost a lot.  Thus when
-          facing the choice of updating software, they prefer to let user use
-          old version instead of making updates.</p>
-        <p>Thus, can probably you trust the Android developers, but probably
-          not the phone manufacturers for releasing the security issue
-          fixes.</p>
-        <pre>
-          https://commons.wikimedia.org/wiki/File:Android_historical_version_distribution_-_vector.svg
-          Author: Erikrespo (user on wikipedia.org)
-          This file is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported license.
-      </pre></footer>
+      </footer>
     </section>
   </div></div>
 
@@ -211,17 +163,6 @@ This presentation introduces a new way to handle security updates, in a manner w
       </header>
       <img class="middle" width="95%" src="img/firefox-releases.png">
       <footer class="notes">
-        <p>Ok, let's look at Firefox now.</p>
-        <p>As we can see in this graph of Firefox releases, we see that
-          Firefox releases about 10 major versions per year, and about 20
-          "patch" releases.</p>
-        <p>One of the question we might ask, is how do they manage to do so
-          many "patch" releases?</p>
-        <pre>
-          https://fr.wikipedia.org/wiki/Historique_des_sorties_de_Mozilla_Firefox
-          This generated file is licensed under the Creative Commons
-          Attribution-Share Alike 3.0 Unported license.
-          </pre>
       </footer>
     </section>
   </div></div>
@@ -237,11 +178,6 @@ This presentation introduces a new way to handle security updates, in a manner w
         <li>Copy & Pasta.</li>
       </ul>
       <footer class="notes">
-        <p>If you want to make security updates, you want to avoid having to
-          do it as something which differs from your normal release
-          process.  Otherwise, this would probably means that this is an
-          exceptional case, and as it is exceptional you might not realize
-          that a typo slips into your updates, or slide.</p>
       </footer>
     </section>
   </div></div>
@@ -258,16 +194,6 @@ This presentation introduces a new way to handle security updates, in a manner w
         <li>Improve the speed.</li>
       </ul>
       <footer class="notes">
-        <p>The way Mozilla do is that they have a release process that we
-          call "chemspill" for "chemical spillage". The idea of having such
-          process is to make sure that we can do things with a minimum of
-          mistakes and makes sure that we don't spin while trying to find
-          what is the next thing to do.</p>
-        <pre>
-        Illustration made by Hervé Renault[1] base on one made by lisaamybeth[2].
-        [1] https://twitter.com/HerveRenault
-        [2] https://openclipart.org/detail/152197/chemical-symbol
-        </pre>
       </footer>
     </section>
   </div></div>
