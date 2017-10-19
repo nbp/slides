@@ -1,0 +1,750 @@
+<!DOCTYPE HTML>
+<!-- <html lang="en-US"> -->
+<html lang="en-US" class="fade">
+<!-- 
+  ^ a class of "fade" makes slides fade smoothly into one another
+ -->
+<!-- <html lang="en-US" class="nonumbers"> -->
+<!-- 
+
+############### Why & What & How? ###############
+
+## Why Baseline / IonMonkey are bad?
+
+ - Head count issue, versus the competition.
+
+ - Cretonne is an incomplete solution for SpiderMonkey!
+
+ - MacroAssembler is a pain.
+
+ - MIR is a pain.
+
+ - Inline caches holes.
+
+ - Builtins hand-made specialization.
+
+ - Self-hosting is a security concern.
+
+ - Self-hosting is a performance concern: Start-up vs. Long-runs.
+
+
+## Why is HolyJit better?
+
+ - jit as a library, for embedders, and better technical feedback.
+
+ - LIR based optimizations.
+
+ - Finite LIR (slowly increasing with hardware?).
+
+ - Annotations, for teaching what a baseline compiler should look like.
+
+ x Security in mind: Out of process executable code generation.
+   - future of Windows store restrictions?
+   - new design opportunity
+   - Rust safety in making it parallel.
+
+ - Cretonne as a backend. (not yet for the prototype)
+
+ - *** This is a practical solution, not a research experiment!
+
+ - Optimizing compiler ideas.
+
+ - Why Rust?
+   - Moving forward.
+   - Future of Firefox new components implementations.
+   - We have ""control"" over the compiler.
+   - We have shared interest for making an independent compiler backend.
+
+ - Listing the known solutions! (RPython , GraalVM + Truffle)
+
+ - Listing the unknown problems (?)
+
+ - No need for Self-hosting: Rust is both the native & self-hosted language.
+
+# How
+
+## Timeline
+
+ - long-term goal
+   - Rewrite SpiderMonkey interpreter and runtime in Rust.
+
+ - mid-term goals    (Increase the impact of the JIT team, not just JS !!)
+   - CSS selector matcher
+   - WebRender CPU fallback
+   - JS Regexp
+   - WebAssembly optimizing compiler
+
+ - Lack of intermediate between JS dynamism & 
+
+## Tons of examples of before/after.
+
+ - Demo the prototype, to demonstrate that this is a viable solution!
+
+ - MArrayPush example*s* comparisons, and logic path taken by humans making
+   these implementations.
+
+ - Optimizing "Int + Int" walk-through, in the different tiers.
+   - Method JIT compiler.
+   - Inlince cache is the result, Tracing is a compilation method.
+
+ - Manual guidance examples.
+   - jit_inline_if!(… cond …)
+   - jit_guard!(…)                    ; to combine with constant propagation.
+   - jit_inline_cache!{… code …}
+   - jit_unroll_loop!{… loop-body …}
+   - jit_constant!{… expr …}
+   - jit_inline_type!{… expr …} // scalar replacement ?
+   - jit_skip!{… expr …}  // remove expressions from recorded traces.
+
+ - lookup_pure vs. lookup examples (tracing vs. repeating)
+   - Generating tracing code.
+   - Optimizing get-prop to a simple guard & load. (inlining the returned offset)
+
+
+############# Quotes from me:
+
+* We would never rewrite the Interpreter in Rust if there is no Carrot at the
+end, this project is the Carrot.
+
+-->
+<head>
+  <meta charset="UTF-8">
+  <title>HolyJit</title>
+<!-- 
+  If you upload your slides to the web, ensure that you have 
+  a good title - this shows up in search results and social
+  media links
+ -->
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="themes/mozilla/styles/style.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>HolyJit</h1>
+    <p class="footer">
+      Nicolas B. Pierron [:nbp]
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong>
+      SpiderMonkey's JIT are full of problems, and we have a way out!  This presentation
+      goes through some the maintenance problems that we have or had with
+      Baseline and IonMonkey. Then, it present an alternative to the current
+      state, and a way to get there.
+    </p>
+  </aside>
+
+  <div id="cover" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2>HolyJit: Fire the IonCannon!</h2>
+      </header>
+      <img src="pictures/ION_MONKEY800.jpg"
+           class="middle shadow" height="400"
+           alt="IonMonkey poster">
+      <small class="byline">
+        Nicolas B. Pierron [:nbp]<br>
+        JS Team Meetup 2017
+      </small>
+      <footer class="notes">
+        The name is a reference to another project named GraalVM, except that
+        the goal of this project is not to make a VM, but only to make a JIT as
+        a library.
+
+        If you disagree, just look at http://www.libpr0n.com/index.html and we
+        can continue the discussion later.
+      </footer>
+    </section>
+  </div></div>
+
+
+
+  <div id="presentationPlan" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ol>
+        <li>SpiderMonkey's JIT Problems.</li>
+        <li>HolyJit Proposal.</li>
+        <li>HolyJit Timeline.</li>
+        <li>Demo &amp; What To Expect Next.</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+
+  <div id="p1-cover" class="slide"><div>
+    <section>
+      <header>
+        <h2>SpiderMonkey's JIT Problems</h2>
+      </header>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-quantity" class="slide"><div>
+    <section>
+      <header>
+        <h2>Large</h2>
+      </header>
+      <ul>
+        <li>js/src/jit contains ~5% of Firefox C++ code.</li>
+        <li>Jit teams is 3 — 5 persons (4.3% under Selena Deckelmann, 1.6% under Dave Camp).</li>
+      </ul>
+      <footer class="notes">
+        wc -l /jit/src/jit/**/*.{cpp,h} == 362515<br>
+        wc -l /jit/src/jit/**/*.{cpp,h} == 7361888<br>
+        116 persons under Selena Deckelmann<br>
+        320 persons under Dave Camp<br>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-complexity" class="slide"><div>
+    <section>
+      <header>
+        <h2>Complex</h2>
+      </header>
+      <ul>
+        <li>Targets an <b>evolving</b> language. (JavaScript)</li>
+        <li>Manually <b>duplicate</b> code written in C++.</li>
+        <li>Manually <b>specialize</b> based on type.</li>
+        <li>Manually <b>assemble</b> with a MacroAssembler.</li>
+      </ul>
+      <ul>
+        <li>~14850 lines contains "masm" under js/src/.</li>
+        <li>js/src/jit: Bugs per lines = 14‰.</li>
+      </ul>
+      <footer class="notes">
+        TODO: evolving, duplicate, specialize, assembled.<br>
+        <a href="https://bugzilla.mozilla.org/buglist.cgi?keywords=sec-critical%2C%20sec-high%2C%20sec-moderate%2C%20&keywords_type=anywords&list_id=13833556&longdesc_type=allwordssubstr&columnlist=product%2Ccomponent%2Cassigned_to%2Cbug_status%2Cpriority%2Cshort_short_desc%2Cstatus_whiteboard%2Ccf_last_resolved%2Clongdescs.count%2Copendate&resolution=FIXED&query_format=advanced&bug_status=RESOLVED&bug_status=VERIFIED&bug_status=CLOSED&longdesc=js%2Fsrc%2Fjit%2F&component=JavaScript%20Engine&component=JavaScript%20Engine%3A%20JIT&product=Core">Security
+          bugs query</a><br>
+        wc -l /jit/src/jit/**/*.{cpp,h} == 362515<br>
+        git log --pretty="%s" --abbrev-commit origin/master -- js/src/{jit,ion}
+          | sed -n '/^Bug/ { s/\(Bug [0-9]*\).*/\1/; p }' | sort | uniq | wc -l
+          === 5313<br>
+        git log --pretty="%s" --abbrev-commit origin/master -- js/src/jit
+          | sed -n '/^Bug/ { s/\(Bug [0-9]*\).*/\1/; p }' | sort | uniq | wc -l
+          === 3901<br>
+        git log --pretty="" -p origin/master -- js/src/jit | grep -v '^---' |
+          grep -v '^+++' | grep -c '^+' == 896795 (230 / bug)<br>
+        git log --pretty="" -p origin/master -- js/src/jit | grep -v '^---' |
+          grep -v '^+++' | grep -c '^-' == 535053 (137 / bug)<br>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-incomplete" class="slide"><div>
+    <section>
+      <header>
+        <h2>Incomplete</h2>
+      </header>
+      <ul>
+        <li>Baseline supports an <b>optimized sub-set</b> of the Interpreter.</li>
+        <li>Cache IR supports an <b>optimized sub-set</b> of the Interpreter / VM.</li>
+        <li>IonMonkey (MIR) supports an <b>optimized sub-set</b> of the Interpreter / VM / Builtins.</li>
+      </ul>
+      <ul>
+        <li>js/src/jit: 867 bugs have the verb "Add" in the subject (22.2% of bugs).</li>
+      </ul>
+      <footer class="notes">
+        git log --pretty="%s" -i --grep=add --abbrev-commit origin/master -- js/src/jit
+          | sed -n '/^Bug/ { s/\(Bug [0-9]*\).*/\1/; p }' | sort | uniq | wc -l
+          === 3901<br>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-security" class="slide"><div>
+    <section>
+      <header>
+        <h2>Insecure</h2>
+      </header>
+      <ul>
+        <li>MacroAssembler: <b>Assembly</b> code with holes.</li>
+        <li>SelfHosted: Random memory accesses in JS.</li>
+      </ul>
+      <ul>
+        <li>570 crashes contains "js/src/jit/" (14.6% of bugs).</li>
+        <li>208 security bug contains "js/src/jit/" (<b>5.3% of bugs</b>).</li>
+        <li>Crashes have between 1—143 comments (median: ~10).</li>
+        <li>Security issues have between 6—83 comments (<b>median: 22</b>).</li>
+        <li>~13840 lines of self-hosted JavaScript code! (js/src/builtin/*.js)</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-performance" class="slide"><div>
+    <section>
+      <header>
+        <h2>Hard choices</h2>
+      </header>
+      <ul>
+        <li>Self-hosting: <b>Choose</b> between fast start-up (xor) fast steady runs.</li>
+        <li>Baseline: Hours of work for simple additions.</li>
+        <li>IonMonkey: Hours of work for simple additions.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-future" class="slide"><div>
+    <section>
+      <header>
+        <h2>If we continue the same way…</h2>
+      </header>
+      <ul>
+        <li><b>Lagging behind</b> on JIT-ing new JavaScript features.</li>
+        <li><b>Same amount of work</b> as the competition. (i-e a lot of efforts)</li>
+      </ul>
+      <footer class="notes">
+        This is like a F1 race, where all the competitotrs have the same cars,
+        and you are basically evaluating all the competitors on 0.5s difference
+        at the end of a 1 hour race.
+      </footer>
+    </section>
+  </div></div>
+
+
+
+  <div id="p2-cover" class="slide"><div>
+    <section>
+      <header>
+        <h2>HolyJit Proposal</h2>
+      </header>
+      <a href="https://github.com/nbp/holyjit">https://github.com/nbp/holyjit</a>
+      <footer class="notes">
+        What I am suggesting, is that we stop at the stand, install a jet engine
+        on our race car, and catch-up and stay ahead of the game.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-I-have-been-thinking" class="slide"><div>
+    <section>
+      <header>
+        <h2>1 year ago!</h2>
+      </header>
+      <p><quote>One of the thing I was interested in making such abstraction
+      above our the MacroAssembler, was the ability to have <b>completeness</b>, and
+      IC, and Inline code, from the Interpreter to Ion, with a <b>single</b>
+      implementation.</quote></p>
+      <p class="right">Nicolas B. Pierron — <a href="http://logs.glob.uno/?c=mozilla%23jsapi&s=19+Oct+2016&e=19+Oct+2016#c803198">19 Oct 2016</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-overview" class="slide"><div>
+    <section>
+      <header>
+        <h2>Overview</h2>
+      </header>
+      <img src="pictures/hj-overview.svg" class="myM">
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-general-purpose" class="slide"><div>
+    <section>
+      <header>
+        <h2>General Purpose</h2>
+      </header>
+      <ul>
+        <li>Embeddable <b>library</b>.</li>
+        <li>Language <b>independent</b>.</li>
+        <li>Jit Rust code: At compile time &amp; At run time.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-lir" class="slide"><div>
+    <section>
+      <header>
+        <h2>Simple</h2>
+      </header>
+      <ul>
+        <li>Low-level IR. (<b>WASM-like</b>?)</li>
+        <li><b>Finite</b> set of instructions. (increasing with hardware?)</li>
+        <li>Alias Set <b>provided by the static compiler</b>.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-annotations" class="slide"><div>
+    <section>
+      <header>
+        <h2>Code Annotation</h2>
+      </header>
+      <ul>
+        <li>Used to <b>guide</b> pre-compiled teiring.</li>
+        <li>Made with Rust Macro (<b>no-op</b> artifacts)</li>
+        <li>The Plugin is guided by these annotations.</li>
+        <li>Used for: guards, inline caches, unrolling loops, escape analysis,
+          ignoring code, inlining, etc.</li>
+      </ul>
+      <footer class="notes">
+        Annotate is in opposition to Duplicate.
+
+        We can annotate the trampoline function needed to wrap DOM functions,
+        and get this trampoline function inlined.  Moreover, We can also inline
+        any DOM function rewritten in Rust and annotated the same way!
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-not-new" class="slide"><div>
+    <section>
+      <header>
+        <h2>Similar Projects</h2>
+      </header>
+      <ul>
+        <li>RPython (PyPy)</li>
+        <li>GraalVM + Truffle</li>
+      </ul>
+      <footer class="notes">
+        This is not a new idea.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-but-different" class="slide"><div>
+    <section>
+      <header>
+        <h2>Differences</h2>
+      </header>
+      <ul>
+        <li><b>A single language</b> is both statically/dynamically-compiled (self-hosting)</li>
+        <li>Rust is the <b>future of Firefox</b> (not Python / Java).</li>
+      </ul>
+      <footer class="notes">
+        But different.
+        In safety we t'Rust!
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-opportunities" class="slide"><div>
+    <section>
+      <header>
+        <h2>Opportunities</h2>
+      </header>
+      <ul>
+        <li>Both a method compiler, and a trace-compiler (for inline caches)</li>
+        <li>Better optimizing compiler design.</li>
+        <li>Use it as an AOT-compiler for Rust code. (maybe?)</li>
+      </ul>
+      <footer class="notes">
+        But different, both politically and .
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-more-security" class="slide"><div>
+    <section>
+      <header>
+        <h2>More Security</h2>
+      </header>
+      <ul>
+        <li>Option to generate code in another process.</li>
+      </ul>
+      <footer class="notes">
+        Windows is likely to enforce it as a policy for its market place, and we
+        should not loose our Windows user population.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-method-compiler" class="slide"><div>
+    <section>
+      <header>
+        <h2>Method Compiler(s)</h2>
+      </header>
+      <ul>
+        <li>Define one entry point.</li>
+        <li>Unroll the Interpreter loop.</li>
+        <li>Scalar-replace &amp; Recover the stack.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-trace-compiler" class="slide"><div>
+    <section>
+      <header>
+        <h2>Trace Compiler</h2>
+      </header>
+      <ul>
+        <li>Generate Inline Caches.</li>
+        <li>Generate tracing code ahead-of-time.</li>
+        <li>Guard for annotated values.</li>
+        <li>Propagate constants in traces.</li>
+        <li>Pre-compile stubs ahead-of-time. (similar to Baseline)</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-optimizing-compiler" class="slide"><div>
+    <section>
+      <header>
+        <h2>Optimizing Compiler</h2>
+      </header>
+      <p>… hand wave upcoming svg files …</p>
+      <footer class="notes">
+        1. Workload; 2. Optimization; 3. Unit test + fuzzing.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-generate-code" class="slide"><div>
+    <section>
+      <header>
+        <h2>Generate Code</h2>
+      </header>
+      <ul>
+        <li>Always use Cretonne.</li>
+        <li>Pre-compiled with fixed register allocation. (similar to Baseline)</li>
+      </ul>
+      <footer class="notes">
+        Using Cretonne during the static-compilation, we can generate blobs of
+        assembly code pre-compiled, and with a custom ABI to be able to copy
+        &amp; paste pieces of code, as Baseline is doing with its fixed register
+        allocation.
+
+        This way, we are able to use Cretonne for both Baseline and Inline
+        Caches, as opposed to what would have been possible in the current
+        implementation of SpiderMonkey.
+      </footer>
+    </section>
+  </div></div>
+
+
+
+  <div id="p3-cover" class="slide"><div>
+    <section>
+      <header>
+        <h2>HolyJit Timeline</h2>
+      </header>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-long-term" class="slide"><div>
+    <section>
+      <header>
+        <h2>Long Term</h2>
+      </header>
+      <ul>
+        <li>Rewrite the Interpreter and Builtins in Rust.</li>
+        <li>Use HolyJit to compile it.</li>
+        <li>Compete with IonMonkey &amp; Baseline.</li>
+      </ul>
+      <footer class="notes">
+        This goal is a large investment, and if this was the only solution, we
+        would probably not accept this project in the current state.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-mid-term" class="slide"><div>
+    <section>
+      <header>
+        <h2>Mid Term</h2>
+      </header>
+      <ul>
+        <li>CSS selector matcher.</li>
+        <li>WebRender CPU backend.</li>
+        <li>RegExp Engine.</li>
+        <li>WASM optimizing compiler. (?)</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-short-term" class="slide"><div>
+    <section>
+      <header>
+        <h2>Short Term</h2>
+      </header>
+      <ul>
+        <li>Requirements from Rust-compiler team.</li>
+        <li>Requirements from Build-system team.</li>
+        <li>Follow rustc closely.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-mid-long-term-issue" class="slide"><div>
+    <section>
+      <header>
+        <h2>Mid—Long Term Issue</h2>
+      </header>
+      <ul>
+        <li>Do we have a dynamic language except JavaScript?</li>
+        <li>Should we make a Servo-like JavaScript engine?</li>
+        <li>Should we contribute to another dynamic language …?… VM?</li>
+      </ul>
+      <footer class="notes">
+        We do not have to answer these questions today, and we might not be able
+        to answer these questions yet.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-cover" class="slide"><div>
+    <section>
+      <header>
+        <h2>Demo</h2>
+      </header>
+      <p>… Demo Time …</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-array-push-ion" class="slide"><div>
+    <section>
+      <header>
+        <h2>Array.push</h2>
+      </header>
+      <p>$ git show ':/Bug 966743'</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-array-push-before" class="slide"><div>
+    <section>
+      <header>
+        <h2>Array.push (before)</h2>
+      </header>
+      <pre>
+        <code>fn array_push(args: &CallArgs) -> Result&lt;JSValue, Error&gt; {</code>
+        <code>  jit_inline_if!(args.len() == 1);</code>
+        <code>  …</code>
+        <code>}</code>
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-array-push-after" class="slide"><div>
+    <section>
+      <header>
+        <h2>Array.push (after)</h2>
+      </header>
+      <pre>
+        <code>fn array_push(args: &CallArgs) -> Result&lt;JSValue, Error&gt; {</code>
+        <code>  jit_inline_if!(args.len() &gt;= 1);</code>
+        <code>  …</code>
+        <code>}</code>
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-jit-macros" class="slide"><div>
+    <section>
+      <header>
+        <h2>Jit macros</h2>
+      </header>
+      <ul>
+        <li>jit_inline_if!(… cond …)</li>
+        <li>jit_guard!{… expr …}</li>
+        <li>jit_inline_cache!{… code …}</li>
+        <li>jit_unroll_loop!{… loop body …}</li>
+        <li>jit_constant!{… expr …}</li>
+        <li>jit_inline_type!{… expr …}</li>
+        <li>jit_skip!{… code … }</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-jsop-add-walkthrough" class="slide"><div>
+    <section>
+      <header>
+        <h2>JSOP_ADD walkthrough</h2>
+      </header>
+      <p>… Live annotation of SpiderMonkey's code …</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-questions" class="slide"><div>
+    <section>
+      <header>
+        <h2>Questions?</h2>
+      </header>
+      <ol>
+        <li>Your turn to ask your questions.</li>
+        <li>My turn to ask you questions.</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-yes-no-questions" class="slide"><div>
+    <section>
+      <header>
+        <h2>Yes / No?</h2>
+      </header>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+<!--
+  <div id="curr-optim-uce" class="slide"><div>
+    <section>
+      <header>
+        <h2>UCE</h2>
+      </header>
+      <pre>
+        <code>if (predicate() /* proved false */)</code>
+        <code>  /* remove code */</code>
+        <code>…</code>
+      </pre>
+      <p>Unreachable Code Elimination, remove unused branches.</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+-->
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
