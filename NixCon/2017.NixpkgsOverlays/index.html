@@ -81,7 +81,7 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
   </aside>
 
 
-  <div id="cover" class="slide cover h"><div>
+  <div id="p0-cover" class="slide cover h"><div>
     <section>
       <header>
         <h2 style="text-align: center;">Nixpkgs Overlays</h2>
@@ -98,7 +98,7 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
     </section>
   </div></div>
 
-  <div id="presentation" class="slide"><div>
+  <div id="p0-presentation" class="slide"><div>
     <section>
       <header>
         <h2>This Presenetation</h2>
@@ -107,516 +107,518 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
         <li>Why adding overlays?</li>
         <li>How to use them?</li>
         <li>How do they work?</li>
-        <li>What we do with them?</li>
+        <li>What can we do with them?</li>
       </ul>
       <footer class="notes">
       </footer>
     </section>
   </div></div>
 
-  <div id="trust-who" class="slide"><div>
+  <div id="p1-nixos-is-awesome" class="slide"><div>
     <section>
       <header>
-        <h2>Trust, Who?</h2>
+        <h2>NixOS Is Awesome</h2>
       </header>
-      <p>Can we even trust software makers?</p>
       <ol>
-        <li>Do they care <strong>about you</strong>?</li>
-        <li>Are issues <strong>fixed</strong> quickly?</li>
-        <li>Are fixes <strong>released</strong> quickly?</li>
+        <li>Declarative</li>
+        <li>Composable</li>
       </ol>
       <footer class="notes">
       </footer>
     </section>
   </div></div>
 
-  <div id="trust-example" class="slide"><div>
+  <div id="p1-nixpkgs-is-behind" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nixpkgs before Overlays</h2>
+      </header>
+      <ol>
+        <!-- todo: use style to cross the text -->
+        <li style="text-decoration: line-through;">Declarative</li>
+        <li style="text-decoration: line-through;">Composable</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-prior-overlays" class="slide"><div>
+    <section>
+      <header>
+        <h2>Before Overlays</h2>
+      </header>
+      <ol>
+        <li>packageOverride</li>
+        <li>overridePackages</li>
+        <li><pre><code class="nix">import &lt;nixpkgs&gt; { … } // { … }</code></pre></li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-overlays-are-composable" class="slide"><div>
+    <section>
+      <header>
+        <h2>Overlays are Composable</h2>
+      </header>
+      <p>Composable (i.e. f · g · h) Implies:</p>
+      <ol>
+        <li>Same syntax for all overlays.</li>
+        <li>Replace packages without Nixpkgs modifications.</li>
+        <li>Add new packages.</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-the-empty-overlay" class="slide"><div>
+    <section>
+      <header>
+        <h2>Empty Overlay</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+
+{
+}     </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-overlays-are-nixpkgs-internal" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nixpkgs Internal</h2>
+      </header>
+      <pre class="good"><code class="nix">stdenvAdapters = self: super: …;
+trivialBuilders = self: super: …;
+stdenvBootstappingAndPlatforms = self: super: …;
+platformCompat = self: super: …;
+splice = self: super: …;
+allPackages = self: super: …;
+stdenvOverrides = self: super: …;
+configOverrides = self: super: …;</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-examples-cover" class="slide"><div>
     <section>
       <header>
         <h2>Examples</h2>
       </header>
-      <ol>
-        <li>Android?</li>
-        <li>Firefox?</li>
-        <li>NixOS?</li>
-      </ol>
       <footer class="notes">
       </footer>
     </section>
   </div></div>
 
-  <div id="android-example" class="slide"><div>
+  <div id="p2-examples-chrome" class="slide"><div>
     <section>
       <header>
-        <h2>Android Example</h2>
+        <h2>Examples</h2>
       </header>
-      <img class="middle" width="90%" src="img/Android_historical_version_distribution_-_vector.svg">
+      <pre class="good"><code class="nix">self: super:
+
+{
+  google-chrome = super.google-chrome.override {
+    commandLineArgs =
+      ''--proxy-server="https=127.0.0.1:3128;http=127.0.0.1:3128"'';
+  };
+}     </code></pre>
+      <p><a href="https://spof.px.io/~alex/posts/2017-05-15-nixos-overlay.html">https://spof.px.io/~alex/posts/2017-05-15-nixos-overlay.html</a></p>
       <footer class="notes">
       </footer>
     </section>
   </div></div>
 
-  <div id="firefox-example" class="slide"><div>
+  <div id="p2-examples-nix" class="slide"><div>
     <section>
       <header>
-        <h2>Firefox Example</h2>
+        <h2>Examples</h2>
       </header>
-      <img class="middle" width="95%" src="img/firefox-releases.png">
+      <pre class="good"><code class="nix">self: super:
+
+{
+  nix = super.nix.override {
+    storeDir = "${NIX_NEW_HOME}/store";
+    stateDir = "${NIX_NEW_HOME}/var";
+  };
+}     </code></pre>
+      <p><a href="http://yann.hodique.info/blog/nix-in-custom-location/">http://yann.hodique.info/blog/nix-in-custom-location/</a></p>
       <footer class="notes">
       </footer>
     </section>
   </div></div>
 
-  <div id="making-updates" class="slide"><div>
+  <div id="p2-examples-vidyo" class="slide"><div>
     <section>
       <header>
-        <h2>Making Security Updates</h2>
+        <h2>Examples</h2>
       </header>
-      <p>Exceptional implies stress, stress implies mistakes:</p>
+      <pre class="good"><code class="nix">self: super:
+
+{
+  VidyoDesktop =
+    super.callPackage ./pkgs/VidyoDesktop { };
+}     </code></pre>
+      <p><a href="https://github.com/mozilla/nixpkgs-mozilla/vidyo-overlay.nix">https://github.com/mozilla/nixpkgs-mozilla/vidyo-overlay.nix</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-overlay-arguments" class="slide"><div>
+    <section>
+      <header>
+        <h2>2 Arguments</h2>
+      </header>
       <ul>
-        <li>Typos.</li>
-        <li>Copy & Pasta.</li>
+        <li><b>self</b>: Fix-point result.</li>
+        <li><b>super</b>: Result of the composition before this file</li>
       </ul>
       <footer class="notes">
       </footer>
     </section>
   </div></div>
 
-  <div id="firefox-chemspill" class="slide"><div>
+  <div id="p3-self" class="slide"><div>
     <section>
       <header>
-        <h2>Chemspill</h2>
+        <h2>Self</h2>
       </header>
-      <img class="right" src="img/mozilla_chem_spill.png">
-      <p>Make a process</p>
       <ul>
-        <li>Reduce mistakes.</li>
-        <li>Improve the speed.</li>
+        <li>Used for derivation result.</li>
       </ul>
       <footer class="notes">
       </footer>
     </section>
   </div></div>
 
-  <div id="firefox-chemspill-timeline" class="slide"><div>
+  <div id="p3-super" class="slide"><div>
     <section>
       <header>
-        <h2>Chemspill Timeline</h2>
+        <h2>Super</h2>
       </header>
-      <img class="middle" width="95%" src="img/chemspill-timeline.png">
+      <ul>
+        <li>Used for functions.</li>
+        <li>Used to override recipes.</li>
+      </ul>
       <footer class="notes">
-        <p>This graph highlights how builds are going and how they are
-          released to Firefox users. So, as Mozilla is able to provide
-          frequent fixes, they are also capable of releasing these within a
-          few hours to Linux users, and within a day to windows users.</p>
-        <p>So, let's look how we propose to release updates of sofware such
-          as Firefox</p>
-        <pre>
-          http://www.aosabook.org/en/ffreleng.html
-          This work is made available under the Creative Commons Attribution
-          3.0 Unported license.
-        </pre>
       </footer>
     </section>
   </div></div>
 
-  <div id="how-do-we-ship-today" class="slide"><div>
+  <div id="p3-bad-example-1" class="slide"><div>
     <section>
       <header>
-        <h2>NixOS Example</h2>
+        <h2>Bad Example (2 issues)</h2>
       </header>
-      <p>Suggested ways:</p>
-      <ul>
-        <!-- <li>Rebuild critical path.</li> -->
-        <li>Default channel: Long critical path. (when it builds)</li>
-        <li>Small channel: small ciritcal path (with local rebuilds).</li>
-        <li>Do it yourself <code>pkgs.replaceDependency</code> or
-        <code>system.replaceRuntimeDependencies</code>.</li>
-      </ul>
+      <pre class="bad"><code class="nix">self: super: rec {
+  fakeClosure = self.writeText "fake-closure.nix" ''
+    …
+  '';
+  fakeConfig = self.writeText "fake-config.nix" ''
+    (import ${fakeClosure} {}).config.nixpkgs.config
+  '';
+}     </code></pre>
+      <p><a href="https://github.com/NixOS/nixpkgs/issues/25264">https://github.com/NixOS/nixpkgs/issues/25264</a></p>
       <footer class="notes">
-        <p>So far, we have multiple ways to handle such releases.</p>
-        <pre>
-      </pre></footer>
+        1. self.writeText => super.writeText<br>
+        2. Remove "rec", and use "self" for packages.<br>
+      </footer>
     </section>
   </div></div>
 
-  <div id="nixos-example" class="slide"><div>
+  <div id="p3-bad-example-2" class="slide"><div>
     <section>
       <header>
-        <h2>NixOS Example</h2>
+        <h2>Bad Example (1 issues)</h2>
       </header>
-      <p>Dear user, please proceed as follow:</p>
-      <pre style="font-size:0.7em;left:45px;position:absolute;"><code>system.replaceRuntimeDependencies = with pkgs; [
-  ({ original = openssl;
-     replacement = callPackage /some/path/nixpkgs/pkgs/development/libraries/openssl {
-       fetchurl = fetchurlBoot;
-       cryptodevHeaders = linuxPackages.cryptodev.override {
-         fetchurl = fetchurlBoot;
-         onlyHeaders = true;
-       };
-     };
-  })
-];</code></pre>
+      <pre class="bad"><code class="nix">{ python }:
+self: super:
+{
+  "execnet" =
+    python.overrideDerivation super."execnet" (old: {
+      buildInputs = old.buildInputs
+        ++ [ self."setuptools-scm" ];
+    });
+}     </code></pre>
+      <p><a href="https://github.com/garbas/pypi2nix#convert-generated-requirements-nix-into-nixpkgs-overlay">https://github.com/garbas/pypi2nix#convert-generated-requirements-nix-into-nixpkgs-overlay</a></p>
       <footer class="notes">
-        <p>.</p>
-        <pre>
-        https://nixos.org/wiki/Security_Updates
-      </pre></footer>
+        1. python.overrideDerivation => super.python.overrideDerivation<br>
+      </footer>
     </section>
   </div></div>
 
-  <div id="nixos-requirements" class="slide"><div>
+  <div id="p3-bad-example-3" class="slide"><div>
     <section>
       <header>
-        <h2>NixOS Requirements</h2>
+        <h2>Bad Example (3 issues)</h2>
       </header>
-      <p>Require:</p>
-      <ul>
-        <li>User awareness.</li>
-        <li>User actions.</li>
-        <li>ABI compatible versions.</li>
-        <li>Security updates are the exception. (not the rule)</li>
-      </ul>
-      <p>Otherwise: Normal updates are shipped in a month.</p>
-      <footer class="notes"><pre>
-      </pre></footer>
+      <pre class="bad"><code class="nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
+let
+  projectOverlay = self: super: {
+    customPythonPackages =
+      (import ./requirements.nix {
+        inherit pkgs;
+      }).packages;
+  };
+in
+  import pkgs.path {
+    overlays = [ projectOverlay ];
+  }   </code></pre>
+      <p><a href="https://stackoverflow.com/questions/44316127/implementing-override-in-my-repository">https://stackoverflow.com/…</a>
+        <a href="https://github.com/garbas/pypi2nix#convert-generated-requirements-nix-into-nixpkgs-overlay">https://github.com/garbas/pypi2nix</a></p>
+      <footer class="notes">
+        (This is not an overlay)<br>
+        1. Double use of nixpkgs.<br>
+        2. Use of an external "pkgs" in an overlay<br>
+        3. Split in multiple modules.<br>
+      </footer>
     </section>
   </div></div>
 
-  <div id="nixos-trust" class="slide"><div>
+  <div id="p3-bad-example-3-fixed" class="slide"><div>
     <section>
       <header>
-        <h2>Trust NixOS?</h2>
+        <h2>Better Example</h2>
       </header>
-      <img class="right" width="50%" src="img/Heartbleed.svg">
-      <p style="text-align: center; margin-top: 7em;">Yes-ish<br>which means<br>No</p>
-      <footer class="notes"><pre>
-        http://heartbleed.com/
-        Heartbleed logo is free to use, rights waived via <a href="http://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.
-      </pre></footer>
+      <p style="margin:0">shell.nix:</p>
+      <pre class="good" style="margin-left:45px"><code class="nix">{ pkgsPath ? &lt;nixpkgs&gt; }:
+import pkgsPath {
+  overlays = [ import ./default.nix; ];
+}   </code></pre>
+      <p style="margin:0">default.nix:</p>
+      <pre class="good" style="margin-left:45px"><code class="nix">self: super:
+{
+  customPythonPackages =
+    (import ./requirements.nix {
+      inherit self;
+    }).packages;
+}     </code></pre>
+      <footer class="notes">
+      </footer>
     </section>
   </div></div>
 
-  <div id="world-of-tomorrow" class="slide"><div>
+  <div id="p3-bad-example-4" class="slide"><div>
     <section>
       <header>
-        <h2>Security Issues</h2>
+        <h2>Bad Example (1 issue)</h2>
       </header>
-      <img src="img/futurama_world_of_tomorrow.jpg" style="margin-bottom:3em;">
-      <img src="img/suicide-booth.jpg">
-      <footer class="notes"><pre>
-        Futurama
-      </pre></footer>
+      <pre class="bad"><code class="nix">self: super:
+let inherit (super) callPackage; in
+{
+  radare2 = callPackage ./pkgs/radare2 {
+    inherit (super.gnome2) vte;
+    lua = super.lua5;
+  };
+}     </code></pre>
+      <p><a href="https://gitli.stratum0.org/tnias/overly/blob/master/overly-overlay.nix">https://gitli.stratum0.org/tnias/overly/blob/master/overly-overlay.nix</a></p>
+      <footer class="notes">
+        1. super.lua5 ==> self.lua5 and  super.gnome2  ==> self.gnome2
+      </footer>
     </section>
   </div></div>
 
-  <!--
-  <div id="but-how-others-do" class="slide"><div>
+  <div id="p4-compose-function-1" class="slide"><div>
     <section>
       <header>
-        <h2>Other Distributions</h2>
+        <h2>Compose function</h2>
       </header>
-      <p>How do others do:</p>
-      <ul>
-        <li>Rely on shared libraries.</li>
-        <li>Update <strong>only faulty</strong> packages.</li>
-        <li>Do not necessary restart jobs.</li>
-      </ul>
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="how-do-we-ship-today" class="slide"><div>
-    <section>
-      <header>
-        <h2>Shipping Nixpkgs</h2>
-      </header>
-      <p>Suggested ways:</p>
-      <ul>
-        <li>Rebuild critical path.</li>
-        <li>Default channel: Long critical path. (when it builds)</li>
-        <li>Small channel: small ciritcal path (with local rebuilds).</li>
-        <li>Get your hands dirty with <code>pkgs.replaceDependency</code>.</li>
-      </ul>
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-  -->
-
-  <div id="grmbl-replaceDependency" class="slide"><div>
-    <section>
-      <header>
-        <h2>pkgs.replaceDependency</h2>
-      </header>
-      <p>Substitute references inside package outputs:</p>
-      <ul>
-        <li>Maintained by hand.</li>
-        <li>Realize packages during the evaluation.</li>
-        <li>Realize the packages to apply the fixes.</li>
-        <li>Lack support for statically linked packages.</li>
-        <!--
-        <li>Do not distinguish sources of hashes.</li>
-        -->
-      </ul>
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="one-problem-at-a-time" class="slide"><div>
-    <section>
-      <header>
-        <h2>One problem at a time</h2>
-      </header>
-      <p>By order of importance:</p>
-      <ol>
-        <li>Make it <strong>transparent</strong> for users.</li>
-        <li>Make it <strong>fast</strong> for Hydra.</li>
-        <li>Make it <strong>easy</strong> for package managers.</li>
-        <li>Make it <strong>sane</strong>. (no build during evaluation)</li>
-      </ol>
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="transpartent-0" class="slide"><div>
-    <section>
-      <header>
-        <h2>Transparent</h2>
-      </header>
-      <pre><code>$ nix-channel --update
-$ nix-env -u firefox
+      <pre><code class="nix">
+let
+  foo = { … };
+  bar = { … };
+in
+  foo // bar
       </code></pre>
-      <p>Should become:</p>
-      <pre><code>$ nix-channel --update
-$ nix-env -u firefox</code></pre>
-      <footer class="notes"><pre>
-      </pre></footer>
+      <footer class="notes">
+      </footer>
     </section>
   </div></div>
 
-  <div id="transpartent-1" class="slide"><div>
+  <div id="p4-compose-function-2" class="slide"><div>
     <section>
       <header>
-        <h2>Transparent (Ideal)</h2>
+        <h2>Compose function</h2>
       </header>
-      <pre><code>$ nix-channel --update
-$ nix-env -u firefox
+      <pre><code class="nix">
+let
+  foo = super: …;
+  bar = super: …;
+in
+  foo {} // bar (foo {})
       </code></pre>
-      <p>Should become:</p>
-      <pre><code>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-compose-function-3" class="slide"><div>
+    <section>
+      <header>
+        <h2>Compose function</h2>
+      </header>
+      <pre><code class="nix">
+let
+  foo = super: …;
+  bar = super: …;
+  extend = lhs: rhs: lhs // rhs lhs;
+in
+  extend (extend {} foo) bar;
       </code></pre>
-      <footer class="notes"><pre>
-      </pre></footer>
+      <footer class="notes">
+      </footer>
     </section>
   </div></div>
 
-  <div id="implies-0" class="slide"><div>
+  <div id="p4-compose-function-4" class="slide"><div>
     <section>
       <header>
-        <h2>Implicitcations</h2>
+        <h2>Compose function</h2>
+      </header>
+      <pre><code class="nix">lib:
+let
+  foo = super: …;
+  bar = super: …;
+  extend = lhs: rhs: lhs // rhs lhs;
+in
+  lib.foldl extend {} [ foo bar ];
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-compose-function-5" class="slide"><div>
+    <section>
+      <header>
+        <h2>Compose function</h2>
+      </header>
+      <pre><code class="nix">lib:
+let
+  foo = self: super: …;
+  bar = self: super: …;
+  extend = lhs: rhs: lhs // rhs lhs;
+in
+  lib.fix (self:
+    lib.foldl extend {} (
+      lib.map (x: x self) [ foo bar ]));
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-aggregate" class="slide"><div>
+    <section>
+      <header>
+        <h2>Aggregate</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+let
+  extend = lhs: rhs: lhs // rhs lhs;
+  compose = list:
+    super.lib.foldl extend super (
+      super.lib.map (x: x self) list);
+in
+  compose [
+    (import ./foo-overlay.nix)
+    (import ./bar-overlay.nix)
+  ]   </code></pre>
+      <p><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/default.nix">https://github.com/mozilla/nixpkgs-mozilla/blob/master/default.nix</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-aggregate-clashes" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bad Example (1 issue)</h2>
+      </header>
+      <pre class="bad"><code class="nix">self: super:
+{
+  lib = {
+    firefoxVersion = … ;
+  };
+  latest = {
+    firefox-nightly-bin = … ;
+    firefox-beta-bin = … ;
+    firefox-bin = … ;
+    firefox-esr-bin = … ;
+  };
+}
+</code></pre>
+      <footer class="notes">
+        1. latest might be defined in a previous overlay. The update operator //
+        would replace `super.latest` by the one provided in this overlay.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-aggregate-extends" class="slide"><div>
+    <section>
+      <header>
+        <h2>Always Extends</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+{
+  lib = (super.lib or {}) // {
+    firefoxVersion = … ;
+  };
+  latest = (super.latest or {}) // {
+    firefox-nightly-bin = … ;
+    firefox-beta-bin = … ;
+    firefox-bin = … ;
+    firefox-esr-bin = … ;
+  };
+}
+</code></pre>
+      <p><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/firefox-overlay.nix">https://github.com/mozilla/nixpkgs-mozilla/blob/master/firefox-overlay.nix</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-conventions" class="slide"><div>
+    <section>
+      <header>
+        <h2>Conventions</h2>
       </header>
       <ul>
-        <li>Fixed packages should have the same layout as Nixpkgs.</li>
+        <li><pre><code>{ /* reproducible packages */ }</code></pre></li>
+        <li><pre><code>{ lib = /* utility functions */; }</code></pre></li>
+        <li><pre><code>{ latest = /* builtins.fetchurl */; }</code></pre></li>
+        <li><pre><code>{ latest = /* imports from derivation */; }</code></pre></li>
+        <li><pre><code>{ devEnv = /* nix-shell environments */; }</code></pre></li>
       </ul>
-      <img class="middle" width="90%" style="padding-top:350px;" src="img/nixpkgs-loop.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="fast-0" class="slide"><div>
-    <section>
-      <header>
-        <h2>Fast</h2>
-      </header>
-      <p>Break the critical path in parallel compilation.</p>
-      <p>Do not recompile when a dependency change.</p>
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="fast-1" class="slide"><div>
-    <section>
-      <header>
-        <h2>Fast &amp; Sane</h2>
-      </header>
-      <img class="middle" width="90%" src="img/abifixpkgs-2.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="implies-loop-repeat" class="slide"><div>
-    <section>
-      <header>
-        <h2>Implicitcations</h2>
-      </header>
-      <p>Generate the same set of packages.</p>
-      <img class="middle" width="90%" src="img/nixpkgs-loop-repeat.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="implies-loop-plus-one" class="slide"><div>
-    <section>
-      <header>
-        <h2>Implicitcations</h2>
-      </header>
-      <p>Generate the same set of packages with one extra no-op iteration.</p>
-      <img class="middle" width="90%" src="img/nixpkgs-loop-plus-one.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="implies-loop-quickfix" class="slide"><div>
-    <section>
-      <header>
-        <h2>Implicitcations</h2>
-      </header>
-      <p>Recompile fixed packages based on fixpoint of stable packages.</p>
-      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="implies-loop-quickfix-twice" class="slide"><div>
-    <section>
-      <header>
-        <h2>Implicitcations</h2>
-      </header>
-      <p>Partially recompile fixed packages based on fixed packages.</p>
-      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix-twice.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="implies-loop-quickfix-recompile" class="slide"><div>
-    <section>
-      <header>
-        <h2>Implicitcations</h2>
-      </header>
-      <p>Entirelly recompile fixed packages based on fixed packages.</p>
-      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix-recompile.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <!--
-  <div id="implies-loop-quickfix-patch" class="slide"><div>
-    <section>
-      <header>
-        <h2>Implicitcations</h2>
-      </header>
-      <p>Use the recompiled-info as a hint for patching with dependencies.</p>
-      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix-patch.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-  -->
-
-  <div id="implies-loop-quickfix-whatif-patch" class="slide"><div>
-    <section>
-      <header>
-        <h2>Implicitcations</h2>
-      </header>
-      <p>Use the recompiled-info as a hint for patching with dependencies.</p>
-      <img class="middle" width="90%" src="img/nixpkgs-loop-quickfix-whatif-patch.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="easy-0" class="slide"><div>
-    <section>
-      <header>
-        <h2>Easy</h2>
-      </header>
-      <p>3 lists of packages:</p>
-      <ul>
-        <li>Latest compiled branch.</li>
-        <li>ABI compatible changes branch.</li>
-        <li>Security channel. (merges both)</li>
-      </ul>
-      <img class="middle" width="90%" style="padding-left:900px;" src="img/nixpkgs-loop-quickfix.svg">
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="release-management" class="slide"><div>
-    <section>
-      <header>
-        <h2>Release Management</h2>
-      </header>
-      <p>Packagers options:</p>
-      <ul>
-        <li>Push to master &amp; Cherry-pick ABI compatible changes.</li>
-        <li>Push to ABI changes &amp; Cherry-pick in master.</li>
-      </ul>
-      <p>On new stable channel update:</p>
-      <ul>
-        <li>Merge master into the ABI branch.</li>
-        <li>Reset the ABI branch.</li>
-      </ul>
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-<!-- sane? -->
-
-  <div id="remaining-issues" class="slide"><div>
-    <section>
-      <header>
-        <h2>Remaining Issues</h2>
-      </header>
-      <p>What is left for improvements:</p>
-      <ul>
-        <li>Use runtime dependencies generated by Hydra.</li>
-        <li>Automated updates for registered packages.</li>
-        <li>Support for statically linked packages.</li>
-        <!--
-        <li>Distinguish sources of hashes.</li>
-        -->
-      </ul>
-      <footer class="notes"><pre>
-      </pre></footer>
-    </section>
-  </div></div>
-
-  <div id="the-end" class="slide cover h"><div>
-    <section>
-      <header>
-        <h2 style="text-align: center;">Questions?</h2>
-      </header>
-      <img src="img/STS-31_Hubble_launch_roll_and_pitch.jpg"
-           class="middle shadow" height="100%"
-           alt="">
-      <footer class="notes"><pre>
-          NASA - STS-31 - Hubble launch.
-      </pre></footer>
+      <footer class="notes">
+      </footer>
     </section>
   </div></div>
 
   <!--
     To hide progress bar from entire presentation
     just remove “progress” element.
-    -->
+  -->
   <div class="progress"><div></div></div>
   <script src="scripts/script.js"></script>
   <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
   <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+
+  <!--
+    Highlight.js (BSD v2) highlight anything wrapped in
+    <pre><code>  …  </code></pre> tags
+  -->
+  <link rel="stylesheet" href="highlightjs/styles/default.css">
+  <script src="highlightjs/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
 </body>
 </html>
 

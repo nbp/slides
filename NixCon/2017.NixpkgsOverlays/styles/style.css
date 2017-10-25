@@ -132,7 +132,7 @@ body:after {
 .slide header {
 	margin:0 0 58px;
 	color:rgb(62,62,62);
-	text-transform: uppercase;
+	/* text-transform: uppercase; */
 	font:lighter 40px/1.13 'OpenSansLight', sans-serif;
 	}
 
@@ -166,7 +166,7 @@ body:after {
 	font-style:italic;
 	}
 .slide kbd,
-.slide code {
+.slide pre {
 	padding:3px 8px;
 	-webkit-border-radius:8px;
 	-moz-border-radius:8px;
@@ -178,7 +178,10 @@ body:after {
 	-o-tab-size:4;
 	tab-size:4;
 	font-family:'monaco', 'courier', monospace;
-	}
+}
+.slide code {
+	color:#000;
+}
 
 /* Quote */
 .slide blockquote {
@@ -257,6 +260,7 @@ blockquote .quotesource {
 	white-space:pre;
 }
 .slide pre code {
+        line-height:1.2eM;
 	display:block;
 	padding:0;
 	background:none;
@@ -430,6 +434,14 @@ blockquote .quotesource {
     -ms-transform:translate(0%, -50%);
     -o-transform:translate(0%, -50%);
     transform:translate(0%, -50%);
+}
+	
+.good {
+    background-color: rgba(0,128,0,0.1);
+}
+	
+.bad {
+    background-color: rgba(128,0,0,0.1);
 }
 	
 
