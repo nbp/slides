@@ -82,14 +82,14 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
 
 
   <div id="p0-cover" class="slide cover h"><div>
-    <section>
+    <section style="background: url(img/bg-sandstone-2.png)">
       <header>
         <h2 style="text-align: center;">Nixpkgs Overlays</h2>
       </header>
-      <img src="img/1993_sts61_liftoff.jpg"
-           class="middle shadow" width="100%" height="100%"
+      <img src="img/nixos-snowflake.svg"
+           class="middle" height="100%"
            alt="">
-      <small class="byline">
+      <small class="byline" style="color:#000">
         Nicolas B. Pierron<br>
         NixCon 2017
       </small>
@@ -134,7 +134,6 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
         <h2>Nixpkgs before Overlays</h2>
       </header>
       <ol>
-        <!-- todo: use style to cross the text -->
         <li style="text-decoration: line-through;">Declarative</li>
         <li style="text-decoration: line-through;">Composable</li>
       </ol>
@@ -148,11 +147,12 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
       <header>
         <h2>Before Overlays</h2>
       </header>
-      <ol>
+      <ul>
         <li>packageOverride</li>
         <li>overridePackages</li>
-        <li><pre><code class="nix">import &lt;nixpkgs&gt; { … } // { … }</code></pre></li>
-      </ol>
+        <li><pre><code class="nix">import &lt;nixpkgs&gt; {} // { … }</code></pre></li>
+      </ul>
+      <p>All replaced by Overlays!</p>
       <footer class="notes">
       </footer>
     </section>
@@ -586,7 +586,7 @@ in
     </section>
   </div></div>
 
-  <div id="p5-conventions" class="slide"><div>
+  <div id="p5-set-conventions" class="slide"><div>
     <section>
       <header>
         <h2>Conventions</h2>
@@ -598,6 +598,263 @@ in
         <li><pre><code>{ latest = /* imports from derivation */; }</code></pre></li>
         <li><pre><code>{ devEnv = /* nix-shell environments */; }</code></pre></li>
       </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-file-conventions" class="slide"><div>
+    <section>
+      <header>
+        <h2>Conventions</h2>
+      </header>
+      <ul>
+        <li>nixpkgs-&lt;org&gt;
+          <ul>
+            <li><a href="https://github.com/mozilla/nixpkgs-mozilla">nixpkgs-mozilla</a></li>
+            <li><a href="https://github.com/dapphub/nixpkgs-dapphub">nixpkgs-dapphub</a></li>
+          </ul>
+        </li>
+        <li>&lt;program&gt;-overlay.nix
+          <ul>
+            <li><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/firefox-overlay.nix">firefox-overlay.nix</a></li>
+            <li><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/rust-overlay.nix">rust-overlay.nix</a></li>
+          </ul>
+        </li>
+        <li><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/default.nix">nixpkgs-&lt;org&gt;/default.nix</a>
+        is an overlay</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-what-can-we-do" class="slide"><div>
+    <section>
+      <header>
+        <h2>What Can We Do?</h2>
+      </header>
+      <ul>
+        <li>Fetch from the network.</li>
+        <li>Parse files containing checksums.</li>
+        <li>Generate derivation content.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-firefox-fetch-parse" class="slide"><div>
+    <section>
+      <header>
+        <h2>Firefox (Fetch &amp; Parse)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">with builtins; let
+  firefox_versions =
+    fromJSON (readFile (fetchurl
+      https://product-details.mozilla.org/1.0/firefox_versions.json));
+
+  …
+
+  chksum = "${dir}/firefox-${version}.en-US.${system}.checksums";
+  fileContent = readFile (fetchurl chksum);
+
+  # file content:
+  # &lt;hash&gt; sha512 62733881 firefox-56.0a1.en-US.linux-x86_64.tar.bz2
+  # &lt;hash&gt; sha256 62733881 firefox-56.0a1.en-US.linux-x86_64.tar.bz2
+  file = "firefox-${version}.en-US.${system}.tar.bz2";
+  sha512 = head (match ".*[\n]([0-9a-f]*) sha512 [0-9]* ${file}[\n].*"
+    fileContent);
+in
+  …
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-fetch" class="slide"><div>
+    <section>
+      <header>
+        <h2>Rust (Fetch)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">let
+  # See https://github.com/rust-lang-nursery/rustup.rs/blob/master/src/rustup-dist/src/dist.rs
+  defaultDistRoot = "https://static.rust-lang.org";
+  manifest_v1_url = {
+    dist_root ? defaultDistRoot + "/dist",
+    date ? null,
+    staging ? false,
+    # A channel can be "nightly", "beta", "stable", "\d{1}.\d{1}.\d{1}", or "\d{1}.\d{2\d{1}".
+    channel ? "nightly"
+  }:
+    if date == null && staging == false
+    then "${dist_root}/channel-rust-${channel}"
+    else if date != null && staging == false
+    then "${dist_root}/${date}/channel-rust-${channel}"
+    else if date == null && staging == true
+    then "${dist_root}/staging/channel-rust-${channel}"
+    else throw "not a real-world case";
+
+  manifest_v2_url = args: (manifest_v1_url args) + ".toml";
+in
+  …
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-toml-sample" class="slide"><div>
+    <section>
+      <header>
+        <h2>TOML Sample</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="toml">[pkg.rust.target.x86_64-unknown-linux-gnu]
+available = true
+url = "https://…/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
+hash = "b4329a83a909e279b32f1ee84512cc6ef9a5197347ed527bdc8781e956e44bc5"
+
+[[pkg.rust.target.x86_64-unknown-linux-gnu.components]]
+pkg = "rustc"
+target = "x86_64-unknown-linux-gnu"
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-tokenizer" class="slide"><div>
+    <section>
+      <header>
+        <h2>Rust (TOML Tokenizer)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">let
+  layout_pat_opt = "[ \n]*";
+  token_pat = ''=|[[][[][a-zA-Z0-9_."*-]+[]][]]|[[][a-zA-Z0-9_."*-]+[]]|[a-zA-Z0-9_-]+|"[^"]*"'';
+  tokenizer = str:
+    let
+      # Nix 1.12 has the builtins.split function which allow to tokenize
+      # a file quickly by iterating with a simple regexp.
+      layoutTokenList = split "(${token_pat})" str;
+      isLayout = s: match layout_pat_opt s != null;
+      filterLayout = list:
+        filter (s:
+          if isString s then
+            if isLayout s then false
+            else throw "Error: Unexpected token: '${s}'"
+          else true) list;
+      removeTokenWrapper = list:
+        map (x: assert tail x == []; head x) list;
+    in
+      removeTokenWrapper (filterLayout layoutTokenList);
+
+in
+  …
+</code></pre><!-- #" -->
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-parser" class="slide"><div>
+    <section>
+      <header>
+        <h2>Rust (TOML Parser)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">let
+  parserInitState = { idx = 0; elem = {}; };
+  readToken = state: token:
+    # assert trace "Read '${token}'" true;
+    if state.idx == 0 then
+      # … skip for slide size issues …
+    else if state.idx == 1 then
+      assert token == "=";
+      state // { idx = 2; }
+    else
+      assert state.idx == 2;
+      state // {
+        idx = 0;
+        elem = state.elem // {
+          "${state.name}" = tokenToValue token;
+        };
+      };
+
+  # Mutate the state while iterating over the list of tokens.
+  parser = str:
+    foldl' readToken parserInitState (tokenizer str);
+in
+  …
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-dispatch" class="slide"><div>
+    <section>
+      <header>
+        <h2>Rust (Dispatch)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">let
+  # Intersection of rustup-dist/src/dist.rs listed platforms
+  # and stdenv/default.nix.
+  hostTripleOf = system: { # switch
+    "i686-linux"      = "i686-unknown-linux-gnu";
+    "x86_64-linux"    = "x86_64-unknown-linux-gnu";
+    "armv5tel-linux"  = "arm-unknown-linux-gnueabi";
+    "armv6l-linux"    = "arm-unknown-linux-gnueabi";
+    "armv7l-linux"    = "armv7-unknown-linux-gnueabihf";
+    "aarch64-linux"   = "aarch64-unknown-linux-gnu";
+    "mips64el-linux"  = "mips64el-unknown-linux-gnuabi64";
+    "x86_64-darwin"   = "x86_64-apple-darwin";
+    "i686-cygwin"     = "i686-pc-windows-gnu"; # or msvc?
+    "x86_64-cygwin"   = "x86_64-pc-windows-gnu"; # or msvc?
+    "x86_64-freebsd"  = "x86_64-unknown-freebsd";
+  }.${system} or (throw "Rust overlay does not support ${system} yet.");
+in
+  …
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p6-nixpkgs-is-catching-up" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nixpkgs after Overlays</h2>
+      </header>
+      <ol>
+        <li style="text-decoration: line-through;">Declarative</li>
+        <li>Composable</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p6-nixpkgs-can-do-better" class="slide"><div>
+    <section>
+      <header>
+        <h2>Next: S.O.S.</h2>
+      </header>
+      <p>Simple Override Strategy:</p>
+      <ul>
+        <li>Recusive update operator.</li>
+        <li>Declarative packages.</li>
+        <li>Type friendly syntax.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p7-questions" class="slide"><div>
+    <section>
+      <header>
+        <h2>Questions?</h2>
+      </header>
       <footer class="notes">
       </footer>
     </section>

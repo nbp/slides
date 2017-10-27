@@ -296,6 +296,9 @@ blockquote .quotesource {
 	background:none;
 	color:#888;
 }
+.slide pre * {
+	font-family:monospace;
+}
 
 /* Cover */
 .slide.cover section {
