@@ -101,7 +101,7 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
   <div id="p0-presentation" class="slide"><div>
     <section>
       <header>
-        <h2>This Presenetation</h2>
+        <h2>This Presentation</h2>
       </header>
       <ul>
         <li>Why adding overlays?</li>
@@ -166,8 +166,8 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
       <p>Composable (i.e. f · g · h) Implies:</p>
       <ol>
         <li>Same syntax for all overlays.</li>
-        <li>Replace packages without Nixpkgs modifications.</li>
-        <li>Add new packages.</li>
+        <li>Replace/Add packages without Nixpkgs modifications.</li>
+        <li>List overlays under <code>~/.config/nixpkgs/overlays/</code>.</li>
       </ol>
       <footer class="notes">
       </footer>
@@ -193,7 +193,7 @@ sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
       <header>
         <h2>Nixpkgs Internal</h2>
       </header>
-      <pre class="good"><code class="nix">stdenvAdapters = self: super: …;
+      <pre><code class="nix">stdenvAdapters = self: super: …;
 trivialBuilders = self: super: …;
 stdenvBootstappingAndPlatforms = self: super: …;
 platformCompat = self: super: …;
@@ -201,16 +201,6 @@ splice = self: super: …;
 allPackages = self: super: …;
 stdenvOverrides = self: super: …;
 configOverrides = self: super: …;</code></pre>
-      <footer class="notes">
-      </footer>
-    </section>
-  </div></div>
-
-  <div id="p2-examples-cover" class="slide"><div>
-    <section>
-      <header>
-        <h2>Examples</h2>
-      </header>
       <footer class="notes">
       </footer>
     </section>
@@ -244,8 +234,8 @@ configOverrides = self: super: …;</code></pre>
 
 {
   nix = super.nix.override {
-    storeDir = "${NIX_NEW_HOME}/store";
-    stateDir = "${NIX_NEW_HOME}/var";
+    storeDir = "${&lt;nix-dir&gt;}/store";
+    stateDir = "${&lt;nix-dir&gt;}/var";
   };
 }     </code></pre>
       <p><a href="http://yann.hodique.info/blog/nix-in-custom-location/">http://yann.hodique.info/blog/nix-in-custom-location/</a></p>
@@ -304,7 +294,7 @@ configOverrides = self: super: …;</code></pre>
         <h2>Super</h2>
       </header>
       <ul>
-        <li>Used for functions.</li>
+        <li>Used for functions. (callPackage, lib, …)</li>
         <li>Used to override recipes.</li>
       </ul>
       <footer class="notes">
@@ -357,7 +347,7 @@ self: super:
   <div id="p3-bad-example-3" class="slide"><div>
     <section>
       <header>
-        <h2>Bad Example (3 issues)</h2>
+        <h2>Bad Example (2 issues)</h2>
       </header>
       <pre class="bad"><code class="nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
 let
@@ -377,7 +367,7 @@ in
         (This is not an overlay)<br>
         1. Double use of nixpkgs.<br>
         2. Use of an external "pkgs" in an overlay<br>
-        3. Split in multiple modules.<br>
+        Recommend to split in multiple files.<br>
       </footer>
     </section>
   </div></div>
