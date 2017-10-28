@@ -1,0 +1,871 @@
+<!DOCTYPE HTML>
+<html lang="en-US" class="fade">
+<head>
+  <meta charset="UTF-8">
+  <title>Nixpkgs Overlays</title>
+
+<!--
+
+Goal:
+ - Push for larger adoption of overlays.
+ - Replace old method for doing the same thing.
+ - Provide a reference for making good overlays. (and explain why)
+
+Plan:
+ - What are overlays made for:
+   - Extend Nixpkgs without modifying Nixpkgs.
+   - Externally modify Nixpkgs.
+   - Keep the same syntax as Nixpkgs as much as possible.
+   - Share your work without conflict.
+
+ - Good examples of overlays:
+   - empty overlay.
+   - change the configuration.
+   - change the source.
+   - nixpkgs-mozilla
+     - Firefox.
+       - internals of the firefox overlay (optional)
+     - Rust
+       - internals of the rust overlay (optional)
+   - nixpkgs-dapphub
+
+ - Implementation of overlays:
+   - Understanding Nixpkgs.
+   - Understanding layers.
+   - 
+
+ - Bad examples of overlays:
+   - packageOverrides = super: ...
+   - import <nixpkgs>
+   - self vs. super
+   - rec {}
+
+Talk:
+
+* off-topic intro: Last time in Munchen, Part Time Scientist & DLR.
+  -> Being remote did not help at following what others did.
+  -> Similar to packages outside Nixpkgs.
+     - Have a different interface. (look and feel different)
+
+* goal of overlays:
+ - Remove as much of possible what makes an overlay different from Nixpkgs.
+ - Make external extensiblibility the default.
+ - Make extensibility modular.
+ - Make it possible to share code, the way code is sahred, not in forums!
+
+
+
+sed -n 's/&amp;/&/g; s/&gt;/>/g; s/&lt;/</g; /^\$/ p;' index.html
+
+-->
+
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="styles/style.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>Nixpkgs Overlays</h1>
+    <p class="footer">
+      Nicolas B. Pierron
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong>
+
+      This presentation introduce Nixpkgs overlays, and show the do and don't of it. It then
+      describe how it is implemented, and examples of almost a year of overlays gave us.
+
+    </p>
+  </aside>
+
+
+  <div id="p0-cover" class="slide cover h"><div>
+    <section style="background: url(img/bg-sandstone-2.png)">
+      <header>
+        <h2 style="text-align: center;">Nixpkgs Overlays</h2>
+      </header>
+      <img src="img/nixos-snowflake.svg"
+           class="middle" height="100%"
+           alt="">
+      <small class="byline" style="color:#000">
+        Nicolas B. Pierron<br>
+        NixCon 2017
+      </small>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p0-presentation" class="slide"><div>
+    <section>
+      <header>
+        <h2>This Presentation</h2>
+      </header>
+      <ul>
+        <li>Why adding overlays?</li>
+        <li>How to use them?</li>
+        <li>How do they work?</li>
+        <li>What can we do with them?</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-nixos-is-awesome" class="slide"><div>
+    <section>
+      <header>
+        <h2>NixOS Is Awesome</h2>
+      </header>
+      <ol>
+        <li>Declarative</li>
+        <li>Composable</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-nixpkgs-is-behind" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nixpkgs before Overlays</h2>
+      </header>
+      <ol>
+        <li style="text-decoration: line-through;">Declarative</li>
+        <li style="text-decoration: line-through;">Composable</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-prior-overlays" class="slide"><div>
+    <section>
+      <header>
+        <h2>Before Overlays</h2>
+      </header>
+      <ul>
+        <li>packageOverride</li>
+        <li>overridePackages</li>
+        <li><pre><code class="nix">import &lt;nixpkgs&gt; {} // { … }</code></pre></li>
+      </ul>
+      <p>All replaced by Overlays!</p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-overlays-are-composable" class="slide"><div>
+    <section>
+      <header>
+        <h2>Overlays are Composable</h2>
+      </header>
+      <p>Composable (i.e. f · g · h) Implies:</p>
+      <ol>
+        <li>Same syntax for all overlays.</li>
+        <li>Replace/Add packages without Nixpkgs modifications.</li>
+        <li>List overlays under <code>~/.config/nixpkgs/overlays/</code>.</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-the-empty-overlay" class="slide"><div>
+    <section>
+      <header>
+        <h2>Empty Overlay</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+
+{
+}     </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p1-overlays-are-nixpkgs-internal" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nixpkgs Internal</h2>
+      </header>
+      <pre><code class="nix">stdenvAdapters = self: super: …;
+trivialBuilders = self: super: …;
+stdenvBootstappingAndPlatforms = self: super: …;
+platformCompat = self: super: …;
+splice = self: super: …;
+allPackages = self: super: …;
+stdenvOverrides = self: super: …;
+configOverrides = self: super: …;</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-examples-chrome" class="slide"><div>
+    <section>
+      <header>
+        <h2>Examples</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+
+{
+  google-chrome = super.google-chrome.override {
+    commandLineArgs =
+      ''--proxy-server="https=127.0.0.1:3128;http=127.0.0.1:3128"'';
+  };
+}     </code></pre>
+      <p><a href="https://spof.px.io/~alex/posts/2017-05-15-nixos-overlay.html">https://spof.px.io/~alex/posts/2017-05-15-nixos-overlay.html</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-examples-nix" class="slide"><div>
+    <section>
+      <header>
+        <h2>Examples</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+
+{
+  nix = super.nix.override {
+    storeDir = "${&lt;nix-dir&gt;}/store";
+    stateDir = "${&lt;nix-dir&gt;}/var";
+  };
+}     </code></pre>
+      <p><a href="http://yann.hodique.info/blog/nix-in-custom-location/">http://yann.hodique.info/blog/nix-in-custom-location/</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p2-examples-vidyo" class="slide"><div>
+    <section>
+      <header>
+        <h2>Examples</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+
+{
+  VidyoDesktop =
+    super.callPackage ./pkgs/VidyoDesktop { };
+}     </code></pre>
+      <p><a href="https://github.com/mozilla/nixpkgs-mozilla/vidyo-overlay.nix">https://github.com/mozilla/nixpkgs-mozilla/vidyo-overlay.nix</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-overlay-arguments" class="slide"><div>
+    <section>
+      <header>
+        <h2>2 Arguments</h2>
+      </header>
+      <ul>
+        <li><b>self</b>: Fix-point result.</li>
+        <li><b>super</b>: Result of the composition before this file</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-self" class="slide"><div>
+    <section>
+      <header>
+        <h2>Self</h2>
+      </header>
+      <ul>
+        <li>Used for derivation result.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-super" class="slide"><div>
+    <section>
+      <header>
+        <h2>Super</h2>
+      </header>
+      <ul>
+        <li>Used for functions. (callPackage, lib, …)</li>
+        <li>Used to override recipes.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-bad-example-1" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bad Example (2 issues)</h2>
+      </header>
+      <pre class="bad"><code class="nix">self: super: rec {
+  fakeClosure = self.writeText "fake-closure.nix" ''
+    …
+  '';
+  fakeConfig = self.writeText "fake-config.nix" ''
+    (import ${fakeClosure} {}).config.nixpkgs.config
+  '';
+}     </code></pre>
+      <p><a href="https://github.com/NixOS/nixpkgs/issues/25264">https://github.com/NixOS/nixpkgs/issues/25264</a></p>
+      <footer class="notes">
+        1. self.writeText => super.writeText<br>
+        2. Remove "rec", and use "self" for packages.<br>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-bad-example-2" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bad Example (1 issues)</h2>
+      </header>
+      <pre class="bad"><code class="nix">{ python }:
+self: super:
+{
+  "execnet" =
+    python.overrideDerivation super."execnet" (old: {
+      buildInputs = old.buildInputs
+        ++ [ self."setuptools-scm" ];
+    });
+}     </code></pre>
+      <p><a href="https://github.com/garbas/pypi2nix#convert-generated-requirements-nix-into-nixpkgs-overlay">https://github.com/garbas/pypi2nix#convert-generated-requirements-nix-into-nixpkgs-overlay</a></p>
+      <footer class="notes">
+        1. python.overrideDerivation => super.python.overrideDerivation<br>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-bad-example-3" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bad Example (2 issues)</h2>
+      </header>
+      <pre class="bad"><code class="nix">{ pkgs ? import &lt;nixpkgs&gt; {} }:
+let
+  projectOverlay = self: super: {
+    customPythonPackages =
+      (import ./requirements.nix {
+        inherit pkgs;
+      }).packages;
+  };
+in
+  import pkgs.path {
+    overlays = [ projectOverlay ];
+  }   </code></pre>
+      <p><a href="https://stackoverflow.com/questions/44316127/implementing-override-in-my-repository">https://stackoverflow.com/…</a>
+        <a href="https://github.com/garbas/pypi2nix#convert-generated-requirements-nix-into-nixpkgs-overlay">https://github.com/garbas/pypi2nix</a></p>
+      <footer class="notes">
+        (This is not an overlay)<br>
+        1. Double use of nixpkgs.<br>
+        2. Use of an external "pkgs" in an overlay<br>
+        Recommend to split in multiple files.<br>
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-bad-example-3-fixed" class="slide"><div>
+    <section>
+      <header>
+        <h2>Better Example</h2>
+      </header>
+      <p style="margin:0">shell.nix:</p>
+      <pre class="good" style="margin-left:45px"><code class="nix">{ pkgsPath ? &lt;nixpkgs&gt; }:
+import pkgsPath {
+  overlays = [ import ./default.nix; ];
+}   </code></pre>
+      <p style="margin:0">default.nix:</p>
+      <pre class="good" style="margin-left:45px"><code class="nix">self: super:
+{
+  customPythonPackages =
+    (import ./requirements.nix {
+      inherit self;
+    }).packages;
+}     </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p3-bad-example-4" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bad Example (1 issue)</h2>
+      </header>
+      <pre class="bad"><code class="nix">self: super:
+let inherit (super) callPackage; in
+{
+  radare2 = callPackage ./pkgs/radare2 {
+    inherit (super.gnome2) vte;
+    lua = super.lua5;
+  };
+}     </code></pre>
+      <p><a href="https://gitli.stratum0.org/tnias/overly/blob/master/overly-overlay.nix">https://gitli.stratum0.org/tnias/overly/blob/master/overly-overlay.nix</a></p>
+      <footer class="notes">
+        1. super.lua5 ==> self.lua5 and  super.gnome2  ==> self.gnome2
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-compose-function-1" class="slide"><div>
+    <section>
+      <header>
+        <h2>Compose function</h2>
+      </header>
+      <pre><code class="nix">
+let
+  foo = { … };
+  bar = { … };
+in
+  foo // bar
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-compose-function-2" class="slide"><div>
+    <section>
+      <header>
+        <h2>Compose function</h2>
+      </header>
+      <pre><code class="nix">
+let
+  foo = super: …;
+  bar = super: …;
+in
+  foo {} // bar (foo {})
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-compose-function-3" class="slide"><div>
+    <section>
+      <header>
+        <h2>Compose function</h2>
+      </header>
+      <pre><code class="nix">
+let
+  foo = super: …;
+  bar = super: …;
+  extend = lhs: rhs: lhs // rhs lhs;
+in
+  extend (extend {} foo) bar;
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-compose-function-4" class="slide"><div>
+    <section>
+      <header>
+        <h2>Compose function</h2>
+      </header>
+      <pre><code class="nix">lib:
+let
+  foo = super: …;
+  bar = super: …;
+  extend = lhs: rhs: lhs // rhs lhs;
+in
+  lib.foldl extend {} [ foo bar ];
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-compose-function-5" class="slide"><div>
+    <section>
+      <header>
+        <h2>Compose function</h2>
+      </header>
+      <pre><code class="nix">lib:
+let
+  foo = self: super: …;
+  bar = self: super: …;
+  extend = lhs: rhs: lhs // rhs lhs;
+in
+  lib.fix (self:
+    lib.foldl extend {} (
+      lib.map (x: x self) [ foo bar ]));
+      </code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-aggregate" class="slide"><div>
+    <section>
+      <header>
+        <h2>Aggregate</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+let
+  extend = lhs: rhs: lhs // rhs lhs;
+  compose = list:
+    super.lib.foldl extend super (
+      super.lib.map (x: x self) list);
+in
+  compose [
+    (import ./foo-overlay.nix)
+    (import ./bar-overlay.nix)
+  ]   </code></pre>
+      <p><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/default.nix">https://github.com/mozilla/nixpkgs-mozilla/blob/master/default.nix</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-aggregate-clashes" class="slide"><div>
+    <section>
+      <header>
+        <h2>Bad Example (1 issue)</h2>
+      </header>
+      <pre class="bad"><code class="nix">self: super:
+{
+  lib = {
+    firefoxVersion = … ;
+  };
+  latest = {
+    firefox-nightly-bin = … ;
+    firefox-beta-bin = … ;
+    firefox-bin = … ;
+    firefox-esr-bin = … ;
+  };
+}
+</code></pre>
+      <footer class="notes">
+        1. latest might be defined in a previous overlay. The update operator //
+        would replace `super.latest` by the one provided in this overlay.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p4-aggregate-extends" class="slide"><div>
+    <section>
+      <header>
+        <h2>Always Extends</h2>
+      </header>
+      <pre class="good"><code class="nix">self: super:
+{
+  lib = (super.lib or {}) // {
+    firefoxVersion = … ;
+  };
+  latest = (super.latest or {}) // {
+    firefox-nightly-bin = … ;
+    firefox-beta-bin = … ;
+    firefox-bin = … ;
+    firefox-esr-bin = … ;
+  };
+}
+</code></pre>
+      <p><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/firefox-overlay.nix">https://github.com/mozilla/nixpkgs-mozilla/blob/master/firefox-overlay.nix</a></p>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-set-conventions" class="slide"><div>
+    <section>
+      <header>
+        <h2>Conventions</h2>
+      </header>
+      <ul>
+        <li><pre><code>{ /* reproducible packages */ }</code></pre></li>
+        <li><pre><code>{ lib = /* utility functions */; }</code></pre></li>
+        <li><pre><code>{ latest = /* builtins.fetchurl */; }</code></pre></li>
+        <li><pre><code>{ latest = /* imports from derivation */; }</code></pre></li>
+        <li><pre><code>{ devEnv = /* nix-shell environments */; }</code></pre></li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-file-conventions" class="slide"><div>
+    <section>
+      <header>
+        <h2>Conventions</h2>
+      </header>
+      <ul>
+        <li>nixpkgs-&lt;org&gt;
+          <ul>
+            <li><a href="https://github.com/mozilla/nixpkgs-mozilla">nixpkgs-mozilla</a></li>
+            <li><a href="https://github.com/dapphub/nixpkgs-dapphub">nixpkgs-dapphub</a></li>
+          </ul>
+        </li>
+        <li>&lt;program&gt;-overlay.nix
+          <ul>
+            <li><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/firefox-overlay.nix">firefox-overlay.nix</a></li>
+            <li><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/rust-overlay.nix">rust-overlay.nix</a></li>
+          </ul>
+        </li>
+        <li><a href="https://github.com/mozilla/nixpkgs-mozilla/blob/master/default.nix">nixpkgs-&lt;org&gt;/default.nix</a>
+        is an overlay</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-what-can-we-do" class="slide"><div>
+    <section>
+      <header>
+        <h2>What Can We Do?</h2>
+      </header>
+      <ul>
+        <li>Fetch from the network.</li>
+        <li>Parse files containing checksums.</li>
+        <li>Generate derivation content.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-firefox-fetch-parse" class="slide"><div>
+    <section>
+      <header>
+        <h2>Firefox (Fetch &amp; Parse)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">with builtins; let
+  firefox_versions =
+    fromJSON (readFile (fetchurl
+      https://product-details.mozilla.org/1.0/firefox_versions.json));
+
+  …
+
+  chksum = "${dir}/firefox-${version}.en-US.${system}.checksums";
+  fileContent = readFile (fetchurl chksum);
+
+  # file content:
+  # &lt;hash&gt; sha512 62733881 firefox-56.0a1.en-US.linux-x86_64.tar.bz2
+  # &lt;hash&gt; sha256 62733881 firefox-56.0a1.en-US.linux-x86_64.tar.bz2
+  file = "firefox-${version}.en-US.${system}.tar.bz2";
+  sha512 = head (match ".*[\n]([0-9a-f]*) sha512 [0-9]* ${file}[\n].*"
+    fileContent);
+in
+  …
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-fetch" class="slide"><div>
+    <section>
+      <header>
+        <h2>Rust (Fetch)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">let
+  # See https://github.com/rust-lang-nursery/rustup.rs/blob/master/src/rustup-dist/src/dist.rs
+  defaultDistRoot = "https://static.rust-lang.org";
+  manifest_v1_url = {
+    dist_root ? defaultDistRoot + "/dist",
+    date ? null,
+    staging ? false,
+    # A channel can be "nightly", "beta", "stable", "\d{1}.\d{1}.\d{1}", or "\d{1}.\d{2\d{1}".
+    channel ? "nightly"
+  }:
+    if date == null && staging == false
+    then "${dist_root}/channel-rust-${channel}"
+    else if date != null && staging == false
+    then "${dist_root}/${date}/channel-rust-${channel}"
+    else if date == null && staging == true
+    then "${dist_root}/staging/channel-rust-${channel}"
+    else throw "not a real-world case";
+
+  manifest_v2_url = args: (manifest_v1_url args) + ".toml";
+in
+  …
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-toml-sample" class="slide"><div>
+    <section>
+      <header>
+        <h2>TOML Sample</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="toml">[pkg.rust.target.x86_64-unknown-linux-gnu]
+available = true
+url = "https://…/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
+hash = "b4329a83a909e279b32f1ee84512cc6ef9a5197347ed527bdc8781e956e44bc5"
+
+[[pkg.rust.target.x86_64-unknown-linux-gnu.components]]
+pkg = "rustc"
+target = "x86_64-unknown-linux-gnu"
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-tokenizer" class="slide"><div>
+    <section>
+      <header>
+        <h2>Rust (TOML Tokenizer)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">let
+  layout_pat_opt = "[ \n]*";
+  token_pat = ''=|[[][[][a-zA-Z0-9_."*-]+[]][]]|[[][a-zA-Z0-9_."*-]+[]]|[a-zA-Z0-9_-]+|"[^"]*"'';
+  tokenizer = str:
+    let
+      # Nix 1.12 has the builtins.split function which allow to tokenize
+      # a file quickly by iterating with a simple regexp.
+      layoutTokenList = split "(${token_pat})" str;
+      isLayout = s: match layout_pat_opt s != null;
+      filterLayout = list:
+        filter (s:
+          if isString s then
+            if isLayout s then false
+            else throw "Error: Unexpected token: '${s}'"
+          else true) list;
+      removeTokenWrapper = list:
+        map (x: assert tail x == []; head x) list;
+    in
+      removeTokenWrapper (filterLayout layoutTokenList);
+
+in
+  …
+</code></pre><!-- #" -->
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-parser" class="slide"><div>
+    <section>
+      <header>
+        <h2>Rust (TOML Parser)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">let
+  parserInitState = { idx = 0; elem = {}; };
+  readToken = state: token:
+    # assert trace "Read '${token}'" true;
+    if state.idx == 0 then
+      # … skip for slide size issues …
+    else if state.idx == 1 then
+      assert token == "=";
+      state // { idx = 2; }
+    else
+      assert state.idx == 2;
+      state // {
+        idx = 0;
+        elem = state.elem // {
+          "${state.name}" = tokenToValue token;
+        };
+      };
+
+  # Mutate the state while iterating over the list of tokens.
+  parser = str:
+    foldl' readToken parserInitState (tokenizer str);
+in
+  …
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p5-rust-dispatch" class="slide"><div>
+    <section>
+      <header>
+        <h2>Rust (Dispatch)</h2>
+      </header>
+      <pre class="" style="font-size:0.67eM"><code class="nix">let
+  # Intersection of rustup-dist/src/dist.rs listed platforms
+  # and stdenv/default.nix.
+  hostTripleOf = system: { # switch
+    "i686-linux"      = "i686-unknown-linux-gnu";
+    "x86_64-linux"    = "x86_64-unknown-linux-gnu";
+    "armv5tel-linux"  = "arm-unknown-linux-gnueabi";
+    "armv6l-linux"    = "arm-unknown-linux-gnueabi";
+    "armv7l-linux"    = "armv7-unknown-linux-gnueabihf";
+    "aarch64-linux"   = "aarch64-unknown-linux-gnu";
+    "mips64el-linux"  = "mips64el-unknown-linux-gnuabi64";
+    "x86_64-darwin"   = "x86_64-apple-darwin";
+    "i686-cygwin"     = "i686-pc-windows-gnu"; # or msvc?
+    "x86_64-cygwin"   = "x86_64-pc-windows-gnu"; # or msvc?
+    "x86_64-freebsd"  = "x86_64-unknown-freebsd";
+  }.${system} or (throw "Rust overlay does not support ${system} yet.");
+in
+  …
+</code></pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p6-nixpkgs-is-catching-up" class="slide"><div>
+    <section>
+      <header>
+        <h2>Nixpkgs after Overlays</h2>
+      </header>
+      <ol>
+        <li style="text-decoration: line-through;">Declarative</li>
+        <li>Composable</li>
+      </ol>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p6-nixpkgs-can-do-better" class="slide"><div>
+    <section>
+      <header>
+        <h2>Next: S.O.S.</h2>
+      </header>
+      <p>Simple Override Strategy:</p>
+      <ul>
+        <li>Recusive update operator.</li>
+        <li>Declarative packages.</li>
+        <li>Type friendly syntax.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="p7-questions" class="slide"><div>
+    <section>
+      <header>
+        <h2>Questions?</h2>
+      </header>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+  -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+
+  <!--
+    Highlight.js (BSD v2) highlight anything wrapped in
+    <pre><code>  …  </code></pre> tags
+  -->
+  <link rel="stylesheet" href="highlightjs/styles/default.css">
+  <script src="highlightjs/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+</body>
+</html>
+
