@@ -47,7 +47,8 @@ var chart = c3.generate({
         rotated: true,
         x: {
             type: 'category',
-            categories: ['wikipedia', 'google', 'twitter', 'amazon', 'facebook'],
+            categories: ['Wikipedia', 'Google Search Result', 'Twitter', 'Amazon', 'Facebook Timeline'],
+            tick: { multiline: true },
         },
         y: {
             label: "Time (ms)",
@@ -62,6 +63,7 @@ var chart = c3.generate({
             show: true
         }
     },
+    legend: { item: { onclick: function(id) {} } },
     onresized: function () {
         updateErrorBars(); // need to be fixed..
     }     
