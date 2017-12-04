@@ -569,7 +569,7 @@
      inkscape:groupmode="layer"
      id="layer2"
      inkscape:label="Before"
-     style="display:none">
+     style="display:inline">
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:4.93888855px;line-height:125%;font-family:Sans;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -708,7 +708,7 @@
      inkscape:groupmode="layer"
      id="layer3"
      inkscape:label="After"
-     style="display:inline">
+     style="display:none">
     <use
        style="display:inline"
        x="0"
