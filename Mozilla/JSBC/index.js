@@ -32,8 +32,8 @@ var data = [
 
 var chart = c3.generate({
     size: {
-        width: 800,
-        height: 600,
+        width: document.body.clientWidth - 20,
+        height: document.body.clientHeight - 20,
     },
     data: {
         columns: [
@@ -52,9 +52,9 @@ var chart = c3.generate({
         },
         y: {
             label: "Time (ms)",
-            tick: {
-                format: function (d) { return d + " ms"; }
-            },
+            // tick: {
+            //    format: function (d) { return d + " ms"; }
+            //},
             max: 1990,
         }
     },
@@ -66,7 +66,7 @@ var chart = c3.generate({
     legend: { item: { onclick: function(id) {} } },
     onresized: function () {
         updateErrorBars(); // need to be fixed..
-    }     
+    }
 });
 
 var errorBars = d3.select('#chart svg .c3-chart').append('g');
@@ -115,3 +115,28 @@ function updateErrorBars() {
 };
 
 setTimeout(updateErrorBars, 500);
+
+// Resize the chart at most at 15fps.
+(function() {
+  window.addEventListener("resize", resizeThrottler, false);
+
+  var resizeTimeout;
+  function resizeThrottler() {
+    // ignore resize events as long as an actualResizeHandler execution is in the queue
+    if ( !resizeTimeout ) {
+      resizeTimeout = setTimeout(function() {
+        resizeTimeout = null;
+        actualResizeHandler();
+       // The actualResizeHandler will execute at a rate of 15fps
+       }, 66);
+    }
+  }
+
+  function actualResizeHandler() {
+    // handle the resize event
+    chart.resize({
+      width: document.body.clientWidth - 20,
+      height: document.body.clientHeight - 20
+    })
+  }
+}());
