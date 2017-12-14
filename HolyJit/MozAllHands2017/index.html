@@ -420,6 +420,7 @@ And let's not forget that at the end, SpiderMonkey would be rewritten in Rust.
         <h2>HolyJIT Annotations</h2>
       </header>
       <ul>
+        <li>jit!(… fn …)</li>
         <li>jit_inline_if!(… cond …)</li>
         <li>jit_guard!{… expr …}</li>
         <li>jit_inline_cache!{… code …}</li>
@@ -441,13 +442,24 @@ And let's not forget that at the end, SpiderMonkey would be rewritten in Rust.
     </section>
   </div></div>
 
+  <div id="v3-brainfuck" class="slide"><div>
+    <section>
+      <header>
+        <h2>Brainfuck JIT: 3 lines</h2>
+      </header>
+      <img src="pictures/brainfuck.png" width="100%"/>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
   <div id="v3-the-big-flaw" class="slide"><div>
     <section>
       <header>
         <h2>The Big flaw?</h2>
       </header>
       <p>We cannot afford writing a new JIT for SpiderMonkey.</p>
-      <p>Small impact = small reward over a large investment.</p>
+      <!-- <p>Small impact = small reward over a large investment.</p> -->
       <footer class="notes">
         7. Writing a JIT dedicated for SpiderMonkey is the same problem as
         before, there is a lot of investment, we low returns, because our JITs
@@ -470,7 +482,8 @@ And let's not forget that at the end, SpiderMonkey would be rewritten in Rust.
         <li>WebRender CPU backend</li>
         <li>(we need you!)</li>
       </ul>
-      <p>High impact = distributed rewards over multiple mid-term investments.</p>
+      <!-- <p>High impact = distributed rewards over multiple mid-term
+      investments.</p> -->
       <footer class="notes">
         8 However, we could develop a JIT for the other parts of Firefox, which
         could benefit from a JIT, such as the CSS selector matcher, or WebRender
