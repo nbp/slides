@@ -1,0 +1,686 @@
+<!DOCTYPE HTML>
+<!-- <html lang="en-US"> -->
+<html lang="en-US" class="fade">
+<!-- 
+  ^ a class of "fade" makes slides fade smoothly into one another
+ -->
+<!-- <html lang="en-US" class="nonumbers"> -->
+<!-- 
+
+Ideas:
+ - We can add a JIT for almost-free, as opposed to today !
+ - We can add a JIT to your project !
+
+Slides:
+ 1. What is a Just-In-Time compiler
+    a. Generate Machine code.
+    b. Get better performance.
+ 2. Problems of the JITs.
+    a. Specific to a language.
+    b. Low level Assembly.
+ 3. HolyJit
+    a. Language independent ! ( JIT Instrumented Rust code )
+    b. JIT team does the dirty part, you select what to optimize.
+ 4. JIT opportunities are everywhere
+    a. Loop
+    b. Match
+    c. Same / Similar inputs.
+ 5. I Need You !
+    a. We can boost your performance.
+    b. Increase the impact of the JIT team.
+
+Slides: (v2)
+ - Why making a new JIT.
+   - Improve security.
+     - Don't: Convert mess of C++ into macro assembler code.
+     - Don't: Write high-level code in assembly.
+     - Do: Explicit hypothesis.
+     - Do: Generate code based on hypothesis.
+   - Improve Performance.
+   - Library
+     - Independent of the language.
+     - Easy to instrument your code.
+   - Do not just bet on JS.
+     - CSS
+     - WebRender CPU backend.
+
+Text: 5 minutes; 30 sec / pragraph.
+
+ 1. Firefox is shipped with a JIT compiler for almost 9 years. Since, we got 4
+    JIT compilers (TraceMonkey, JaegerMonkey, IonMonkey and Baseline), and we
+    have shipped IonMonkey for the last 5 years.
+
+    SpiderMonkey is old and complex as well, and language feature such as
+    lifetime are not going to justify a rewrite of SpiderMonkey in Rust.
+
+ 2. What we need to justify such effort is a carrot! In the case of the
+    JavaScript engine, the carrot is named performance, or performance divided
+    by the invesment time, which is known as impact. Can we get more performance
+    with Rust, and how much effort would it be?
+
+    The JIT and the GC are parts of the engine where we get the performance
+    from? Can we provide a good solution for that?
+
+ 3. HolyJIT aims to simplify the way we write a JIT compiler in Rust. It works
+    by dynamically intrumenting the Rust compiler, to do automatically the work
+    that the JIT team as done by hand for the past 10 years based on the MIR
+    representation of the Rust compiler, and annotations provided by the
+    language implementers.
+
+ 4. HolyJit is a JIT for Rust. If we implement a JavaScript interpreter in Rust,
+    and were to annotate to teach HolyJit what are the JIT entry points, what
+    branches are inline caches, and how to deduce type information and guards,
+    we could potentially produce the same code quality as what we have with
+    IonMonkey and Baseline.
+
+ 5. This means that instead of writing hundreds of lines, we could only write a
+    single and let HolyJit generate the hundred lines of code.
+
+    When being fed to the Rust compiler, the artifact are still enough to be
+    visible in terms of type and function names in the MIR.  The plugin look for
+    these function and type names and rewrite the code to generate code, trace
+    the code, or even optimize it ahead of time based on constness hypothesis.
+
+ 6. Ideally the final results should be identical to what we wrote by hand until
+    now. If not, this means that either HolyJit is lacking optimizations, or we
+    are lacking annotations to to teach how to handle these cases.
+
+ 7. This solution is great, it can dramatically reduce the amount of work needed
+    to instrument the JavaScript engine, if it were written in Rust, but
+    rewritting an engine, and a JIT compiler is too much efforts...
+
+    This is where we need you!
+
+ 8. We can improve performances of any annotated interpreters implemented in
+    Rust.
+
+    By luck, we happen to already have some, one is the CSS rule matching engine
+    of Stylo, which is already being shipped in Firefox. Another one is the CPU
+    backend of WebRender, which basically interpreter for the display list
+    applied for each pixel.
+
+ 9. Safari already got a JIT engines for CSS. They manage to get 2x speed-up out
+    of it and they kept it.
+
+    Google tried it, got the same speed-up, and stopped because it was too
+    complex to maintain! Which is exactly what HolyJit is aimed for, which is
+    reducing the maintenance effort needed to instrument an interpreter to get a
+    JIT compiler.
+
+10. Today, we have an opportunity, we can get twice the number of carrots, and
+    bring us closer to the carrot field which is waiting for us.
+
+
+last version:
+
+1. Firefox is shipped with a JIT compiler for almost 9 years. Since, we
+got 4 Just-in-time compilers and 3 Ahead of time compilers, and we have
+shipped IonMonkey for the last 5 years.
+
+SpiderMonkey is old and complex as well, and language feature such as
+lifetime are not going to justify a rewrite of SpiderMonkey in Rust.
+
+2. What we need to justify such effort is a carrot! In the case of the
+JavaScript engine, the carrot is named performance, or performance
+divided by the invesment time, which is known as impact. Can we get more
+performance with Rust, and how much effort would it be?
+
+The JIT and the GC are parts of the engine where we get the performance
+from? What if we could write a GC and a JIT which could prove their
+utility before we decide to commit to this rewrite?
+
+3. In general, a JIT is specific to one language, and JIT libraries are
+quite low level, and still require a large amount of work to integrate.
+
+One exception to that are RPython and GraalVM. For the record, RPython
+is inspired from the mistakes we did in TraceMonkey.
+
+So, could we make a high-level JIT library for Rust?
+
+4. HolyJIT is a high-level JIT library for Rust, which aims to be easy,
+fast and secure.
+
+It is simple because you do not have to generate code, you only
+annotate your function to let a compiler plugin handle the annotated
+functions and generate a JIT compiler for you.
+
+This means that if we were to rewrite SpiderMonkey in Rust, we could use
+this JIT library and annotate the code of the interpreter with the
+proper annotation to get the same optimizations as we have done so far
+by hand for the past 10 years.
+
+5. HolyJIT works by instrumenting the Rust compiler with a plugin. This
+plugin process the MIR at after all other optimizations have been
+applied.
+
+Macros, type and function calls are used as artifact remaining in the
+code are detected by the plugin. When the plugin detects these
+annotation, it will duplicate them, instrument them, and pre-compile
+some of them ahead-of-time.
+
+At the end, the generated binary might have the original uninstrumented
+function for start-up performance, the equivalent of a Baseline compiler
+and the equivalent of an optimizing compiler such as IonMonkey.
+
+6. These annotations are used by the language developers to hint the JIT
+library what parts should be optimized, and what hypothesis can be made,
+such as the constness of some fields, guards, inline caches,
+pre-conditions.
+
+Ideally the final results should be identical to what we wrote by hand
+until now. If not, this means that either HolyJit is lacking
+optimizations, or we are lacking annotations to to teach how to handle
+these cases.
+
+7. Writing a JIT dedicated for SpiderMonkey is the same problem as
+before, there is a lot of investment, we low returns, because our JITs
+are currently too good.
+
+A maintenance improvement is not worth the effort of developing a JIT to
+compete with SpiderMonkey.
+
+8 However, we could develop a JIT for the other parts of Firefox, which
+could benefit from a JIT, such as the CSS selector matcher, or WebRender
+CPU backend.
+
+For example, Webkit has a JIT for CSS which reports a 2x
+speed-up. Google tried and got the same speed-up but did not ship it
+because the maintenance overhead.
+
+HolyJIT aims at removing the maintenance overhead. Thus, by improving
+the performance of CSS, we increase the impact of HolyJIT in Firefox,
+and reduce the investment needed to motivate a rewrite of SpiderMonkey
+in Rust.
+
+9. Today, we have opportunities!
+
+We can reduce the maintenance cost.
+We can improve the security.
+We can increase the impact of the JIT team.
+We can improve performance futher than our competitors.
+We can invest in this technology for a price cheaper than the
+competition.
+
+And let's not forget that at the end, SpiderMonkey would be rewritten in Rust.
+
+
+-->
+<head>
+  <meta charset="UTF-8">
+  <title>HolyJit</title>
+<!-- 
+  If you upload your slides to the web, ensure that you have 
+  a good title - this shows up in search results and social
+  media links
+ -->
+  <meta name="viewport" content="width=device-width, user-scalable=yes">
+  <link rel="stylesheet" href="themes/mozilla/styles/style.css">
+</head>
+<body class="list">
+  <header class="caption">
+    <h1>Write Once, JIT Anywhere!</h1>
+    <p class="footer">
+      Nicolas B. Pierron [:nbp]
+    </p>
+  </header>
+  <aside class="talkdescription">
+    <p>This slide deck is using the shower system - roll over the previews to see the notes and click any slide to go into presentation mode. Then use keys to navigate. <button onclick="goFullScreen()">Go fullscreen</button></p>
+    <p class="abstract">
+      <strong>Abstract: </strong> We have the ability to dramatically
+      increase the impact of the Mozilla's JIT team, by solving a technical
+      issue, we can make it work on any part of code.
+    </p>
+  </aside>
+
+  <!--
+  <div id="cover" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2>Write Once, JIT Anywhere!</h2>
+      </header>
+      <!--
+      <img src="pictures/ION_MONKEY800.jpg"
+           class="middle shadow" height="400"
+           alt="IonMonkey poster">
+      --
+      <small class="byline">
+        Nicolas B. Pierron [:nbp]<br>
+        Austin 2017
+      </small>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+<!-- v3 -->
+
+  <div id="cover-v3" class="slide cover h"><div>
+    <section>
+      <header>
+        <h2>Rewrite SpiderMonkey in Rust?</h2>
+      </header>
+      <small class="byline">
+        Nicolas B. Pierron [:nbp]<br>
+        Austin 2017
+      </small>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v3-no-rust-without" class="slide"><div>
+    <section>
+      <header>
+        <h2>No Rust without improvements</h2>
+      </header>
+      <ul>
+        <li>Performance.</li>
+        <li>Maintenance.</li>
+        <li>Security.</li>
+      </ul>
+      <p>Impact = Benefits / Efforts ?</p>
+      <p>No SpiderMonkey rewrite without a GC / JIT!</p>
+      <footer class="notes">
+        2. What we need to justify such effort is a carrot! In the case of the
+        JavaScript engine, the carrot is named performance, or performance
+        divided by the invesment time, which is known as impact. Can we get more
+        performance with Rust, and how much effort would it be?
+
+        The JIT and the GC are parts of the engine where we get the performance
+        from? What if we could write a GC and a JIT which could prove their
+        utility before we decide to commit to this rewrite?
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+  <div id="v3-a-long-tail" class="slide"><div>
+    <section>
+      <header>
+        <h2>9 years, 4 JITs, 3 AOTs</h2>
+      </header>
+      <ul>
+        <li>TraceMonkey.</li>
+        <li>JaegerMonkey.</li>
+        <li>IonMonkey (OdinMonkey / BaldrMonkey).</li>
+        <li>Baseline.</li>
+        <li>RabaldrMonkey.</li>
+        <li>Cretonne.</li>
+      </ul>
+      <footer class="notes">
+        1. Firefox is shipped with a JIT compiler for almost 9 years. Since, we
+        got 4 Just-in-time compilers and 3 Ahead of time compilers, and we have
+        shipped IonMonkey for the last 5 years.
+
+        SpiderMonkey is old and complex as well, and language feature such as
+        lifetime are not going to justify a rewrite of SpiderMonkey in Rust.
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <!--
+  <div id="v3-starts-with-the-jit" class="slide"><div>
+    <section>
+      <header>
+        <h2>Start with the JIT</h2>
+      </header>
+      <ul>
+        <li>Make a JIT library, for embedders and us.</li>
+        <li>Reduce the amount of rewrite.</li>
+      </ul>
+      <p>See also:</p>
+      <ul>
+        <li>RPython (inspired by TraceMonkey)</li>
+        <li>Truffle &amp; GraalVM</li>
+      </ul>
+      <footer class="notes">
+        3. In general, a JIT is specific to one language, and JIT libraries are
+        quite low level, and still require a large amount of work to integrate.
+
+        One exception to that are RPython and GraalVM. For the record, RPython
+        is inspired from the mistakes we did in TraceMonkey.
+
+        So, could we make a high-level JIT library for Rust?
+      </footer>
+    </section>
+  </div></div>
+  -->
+
+  <div id="v3-starts-with-the-jit" class="slide"><div>
+    <section>
+      <header>
+        <h2>Start with the JIT</h2>
+      </header>
+      <p>To Improve:</p>
+      <ul>
+        <li>(Performance) Optimize for recompilation.</li>
+        <li>(Maintenance) Remove code duplication.</li>
+        <li>(Security) Reduce hand-assembled code.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v3-presenting-holyjit" class="slide"><div>
+    <section>
+      <header>
+        <h2>HolyJIT</h2>
+      </header>
+      <p>High-level JIT library for Rust:</p>
+      <ul>
+        <li>Fast</li>
+        <li>Easy</li>
+        <li>Secure</li>
+      </ul>
+      <p><a href="https://github.com/nbp/holyjit">https://github.com/nbp/holyjit</a></p>
+      <footer class="notes">
+        4. HolyJIT is a high-level JIT library for Rust, which aims to be easy,
+        fast and secure.
+
+        It is simple because you do not have to generate code, you only
+        annotate your function to let a compiler plugin handle the annotated
+        functions and generate a JIT compiler for you.
+
+        This means that if we were to rewrite SpiderMonkey in Rust, we could use
+        this JIT library and annotate the code of the interpreter with the
+        proper annotation to get the same optimizations as we have done so far
+        by hand for the past 10 years.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v3-holyjit-internal" class="slide"><div>
+    <section>
+      <header>
+        <h2>HolyJIT Design</h2>
+      </header>
+      <img width=100% src="img/hj-overview.svg" />
+      <footer class="notes">
+        5. HolyJIT works by instrumenting the Rust compiler with a plugin. This
+        plugin process the MIR at after all other optimizations have been
+        applied.
+
+        Macros, type and function calls are used as artifact remaining in the
+        code are detected by the plugin. When the plugin detects these
+        annotation, it will duplicate them, instrument them, and pre-compile
+        some of them ahead-of-time.
+
+        At the end, the generated binary might have the original uninstrumented
+        function for start-up performance, the equivalent of a Baseline compiler
+        and the equivalent of an optimizing compiler such as IonMonkey.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v3-holyjit-artifacts" class="slide"><div>
+    <section>
+      <header>
+        <h2>HolyJIT Annotations</h2>
+      </header>
+      <ul>
+        <li>jit!(… fn …)</li>
+        <li>jit_inline_if!(… cond …)</li>
+        <li>jit_guard!{… expr …}</li>
+        <li>jit_inline_cache!{… code …}</li>
+        <li>jit_unroll_loop!{… loop body …}</li>
+        <li>jit_constant!{… expr …}</li>
+        <li>jit_skip!{… code … }</li>
+      </ul>
+      <footer class="notes">
+        6. These annotations are used by the language developers to hint the JIT
+        library what parts should be optimized, and what hypothesis can be made,
+        such as the constness of some fields, guards, inline caches,
+        pre-conditions.
+
+        Ideally the final results should be identical to what we wrote by hand
+        until now. If not, this means that either HolyJit is lacking
+        optimizations, or we are lacking annotations to to teach how to handle
+        these cases.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v3-brainfuck" class="slide"><div>
+    <section>
+      <header>
+        <h2>Brainfuck JIT: 3 lines</h2>
+      </header>
+      <img src="pictures/brainfuck.png" width="100%"/>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v3-the-big-flaw" class="slide"><div>
+    <section>
+      <header>
+        <h2>The Big flaw?</h2>
+      </header>
+      <p>We cannot afford writing a new JIT for SpiderMonkey.</p>
+      <!-- <p>Small impact = small reward over a large investment.</p> -->
+      <footer class="notes">
+        7. Writing a JIT dedicated for SpiderMonkey is the same problem as
+        before, there is a lot of investment, we low returns, because our JITs
+        are currently too good.
+
+        A maintenance improvement is not worth the effort of developing a JIT to
+        compete with SpiderMonkey.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v3-the-awesome-solution" class="slide"><div>
+    <section>
+      <header>
+        <h2>The Awesome solution?</h2>
+      </header>
+      <p>We can afford writing a new JIT for other parts of Firefox:</p>
+      <ul>
+        <li>CSS Selector Matching</li>
+        <li>WebRender CPU backend</li>
+        <li>(maybe your code here)</li>
+      </ul>
+      <!-- <p>High impact = distributed rewards over multiple mid-term
+      investments.</p> -->
+      <footer class="notes">
+        8 However, we could develop a JIT for the other parts of Firefox, which
+        could benefit from a JIT, such as the CSS selector matcher, or WebRender
+        CPU backend.
+
+        For example, Webkit has a JIT for CSS which reports a 2x
+        speed-up. Google tried and got the same speed-up but did not ship it
+        because the maintenance overhead.
+
+        HolyJIT aims at removing the maintenance overhead. Thus, by improving
+        the performance of CSS, we increase the impact of HolyJIT in Firefox,
+        and reduce the investment needed to motivate a rewrite of SpiderMonkey
+        in Rust.
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v3-opportunity" class="slide"><div>
+    <section>
+      <header>
+        <h2>Opportunities</h2>
+      </header>
+      <ul>
+        <li>Improve Firefox performance (not just JS).</li>
+        <li>Reduce maintenance cost</li>
+        <li>Improve Security</li>
+        <li>Increase the impact of the JIT.</li>
+        <!-- <li>Cheaper than our competitors.</li> -->
+      </ul>
+      <footer class="notes">
+        9. Today, we have opportunities!
+
+        We can reduce the maintenance cost.
+        We can improve the security.
+        We can increase the impact of the JIT team.
+        We can improve performance futher than our competitors.
+        We can invest in this technology for a price cheaper than the
+        competition.
+
+        And let's not forget that at the end, SpiderMonkey would be rewritten in Rust.
+      </footer>
+    </section>
+  </div></div>
+
+
+<!-- v2 --
+
+  <div id="v2-a-new-hope" class="slide"><div>
+    <section>
+      <header>
+        <h2>A new hope</h2>
+      </header>
+      <ul>
+        <li>Improve Security.</li>
+        <li>Improve Performance.</li>
+        <li>Library.</li>
+        <li>Do not just bet on JS.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v2-s0_0-better-security" class="slide"><div>
+    <section>
+      <header>
+        <h2>Improve Security</h2>
+      </header>
+      <ul>
+        <li>Do not: Hand-convert tons of C++ into macro assembler.</li>
+        <li>Avoid: Implicit knowledge in hand-written assembly.</li>
+        <li>Do: Explicit hypothesis in the high-level code.</li>
+        <li>Do: Generate code based on these hypothesis.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v2-s1_0-better-performance" class="slide"><div>
+    <section>
+      <header>
+        <h2>Improve Performance</h2>
+      </header>
+      <ul>
+        <li>Hypothesis can be added faster than we can convert code by hand.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="v2-s2_0-library" class="slide"><div>
+    <section>
+      <header>
+        <h2>Library</h2>
+      </header>
+      <ul>
+        <li>Language Independent.</li>
+        <li>Write an Intepreter in Rust.</li>
+        <li>Add <emph>hint</emph> with Rust macros.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+<!-- v1 --
+
+  
+  <div id="i0-what-is-a-jit" class="slide"><div>
+    <section>
+      <header>
+        <h2>What is a JIT?</h2>
+      </header>
+      <ul>
+        <li>Generate Machine code.</li>
+        <li>Executed at Runtime.</li>
+        <li>Get better performance.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+
+
+  <div id="i1-jit-issues" class="slide"><div>
+    <section>
+      <header>
+        <h2>JIT Problems</h2>
+      </header>
+      <ul>
+        <li>Specific to a language.</li>
+        <li>Complex code.</li>
+        <li>Generate low level code.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="i2-holyjit" class="slide"><div>
+    <section>
+      <header>
+        <h2>HolyJit</h2>
+      </header>
+      <ul>
+        <li>Language Independent. (Instrumented Rust code)</li>
+        <li>The Jit team does the dirty work.</li>
+        <li>You do the optimization choices.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="i3-opportunities" class="slide"><div>
+    <section>
+      <header>
+        <h2>Opportunities are everwhere!</h2>
+      </header>
+      
+      <pre>
+        <code>loop {</code>
+        <code>  match &lt;code&gt; {</code>
+        <code>     …</code>
+        <code>  }</code>
+        <code>}</code>
+      </pre>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <div id="i4-we-need-you" class="slide"><div>
+    <section>
+      <header>
+        <h2>We need you!</h2>
+      </header>
+      <ul>
+        <li>We can boost your performance.</li>
+        <li>We can improve our security.</li>
+        <li>You can improve the impact of the JIT Team.</li>
+      </ul>
+      <footer class="notes">
+      </footer>
+    </section>
+  </div></div>
+
+  <!--
+    To hide progress bar from entire presentation
+    just remove “progress” element.
+    -->
+  <div class="progress"><div></div></div>
+  <script src="scripts/script.js"></script>
+  <!-- Copyright © 2010–2012 Vadim Makeev — pepelsbey.net -->
+</body>
+</html>
