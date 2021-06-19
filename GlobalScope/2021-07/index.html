@@ -1,0 +1,425 @@
+<!DOCTYPE HTML>
+<html lang="en-US" class="fade">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="author" content="Nicolas B. Pierron">
+        <meta name="description" content="JavaScript gets faster as it executes! Just-In-Time (JIT) compilers are used in all major JavaScript engines to improve the speed, but how do they work? By understanding the principles of JIT compilation, web developers have the opportunity to optimize their code.">
+        <title>Principles of Just-In-Time Compilers.</title>
+
+
+        <meta name="viewport" content="width=device-width, user-scalable=yes">
+        <!-- <link rel="stylesheet" href="styles/style.css"> -->
+        <style>
+         .side-by-side {
+             display: flex;
+             flex-flow: row nowrap;
+             background-color: black;
+             align-items: center;
+             justify-content: space-around;
+         }
+
+         .side-by-side > * {
+             flex: 0 1 45%;
+         }
+
+         #txt-slides {
+             color: #555;
+             font-size: 50px;
+             overflow: hidden;
+             height: 1080px;
+         }
+
+         #svg-slides {
+             overflow: hidden;
+         }
+
+         .emph {
+             color: #fff;
+         }
+        </style>
+    </head>
+    <body class="side-by-side">
+        <article id="txt-slides">
+            <!-- List of paragraphs to be sync with the text -->
+            <p class="intro emph">Hi,</p>
+
+            <p><span class="intro">JavaScript gets faster as it executes! What a strange behaviour, this something rarely seen in computers.</span> <span class="plan">Without looking into each optimization of JIT compilers, we will have a look at what gives JIT compilers their super powers.</span></p>
+
+            <p><span class="plan">Before digging into JIT optimizations, I will answer one of the most asked questions. Why aren’t JIT compilers compiling everything from the beginning?</span> <span class="timing1">To answer this question, let’s consider a random JavaScript function, with no loop.</span></p>
+
+            <p class="timing1">When this function is first called, we parse it and execute it. Next calls, we keep executing it slowly a few times. At one point, we have one slow iteration, which is where the JIT magic happens. And after, all subsequent executions are faster.</p>
+
+            <p class="timing2">If the JIT were to be eager, we would parse, then right away compile, such that all executions are fast.</span> As you might see, this is not always the fastest case, this depends on whether you prefer throughput over responsiveness and it depends on the number of times the function is expected to run.</p>
+
+            <p class="timing3">On a web page, a user expects a fast response or he will browse away. While on a server, the same code answers thousands of requests and the steady performance is more important. Thus, one might expect that you would have different heuristics and optimizations between a JavaScript engine used in a browser and a server.</p>
+
+            <p><span class="expect1">A simple heuristic, which is never implemented as cleanly in JavaScript engines,</span><span class="expect2"> is to guess the time the engine will spend executing each function.</span><span class="expect3"> If by compiling, the speed-up we gain compensate for the slow down of the compilation,</span><span class="expect4"> then scheduling a compilation is worth it, in terms of throughput.</span></p>
+
+            <p class="expect5">Now, we know how Just-In-Time compilers choose to compile on-demand instead of compiling ahead-of-time. It is time for us to look at what Just-in-time compilers are doing.</p>
+
+            <p><span class="vocab0">Before jumping into more detailed explanations for the next 16 minutes, we have to understand control flow graphs. The following blue block is a sequence of code.</span><span class="vocab1"> We represent branches with edges between these blocks. </span><span class="vocab1.1">An if statement would see the code prior the if and the condition in the first block</span><span class="vocab1.2"> which can branch into the then-part,</span><span class="vocab1.3"> or the else-part,</span><span class="vocab1.4"> which are both joining back after the if-statement.</span><span class="vocab2"> If the else branch breaks the control flow, by returning, then we do not have any edge back.</span></p>
+
+            <!-- · <p>Baseline/Simple JIT (Fast with little work) --></p>
+
+            <p class="unrol1">A JIT is all about specializing some code based on its inputs. removing what is useless and optimizing what remains. To know what is removed, let’s first have a look at what is executed.</p>
+
+            <!-- ·· <p>interpreter dispatch cost. --></p>
+
+            <p><span class="unrol1"> The first thing to execute JavaScript code is the interpreter. In general, an interpreter is a loop with a switch statement.</span><span class="unrol2"> The loop iterates over every instruction to be executed, and the switch dispatches the instruction to the code responsible for decoding and executing it.</span></p>
+
+            <p><span class="unrol2">From this, a simple method JIT consists of removing the cost induced by the interpreter.</span><span class="unrol3"> Thus instead of having an interpreter to dispatch every opcode,</span><span class="unrol4"> the JIT replaces the opcode of our bytecode by the corresponding assembly code.</span><span class="unrol5"> For each opcode, we copy the interpreter path used to interpret it,</span><span class="unrol6"> and reconstruct the control flow of the bytecode.</span></p>
+
+            <p class="unrol7">This small modification has a huge impact! Not only do we remove the cost of branching to execute each opcode, but we also specialize the code extracted from the interpreter with the opcode parameters.</p>
+
+            <!-- ·· <p>inline caches [branches] --></p>
+
+            <p><span class="unrol7">Still, some opcodes need a lot of code.</span><span class="plus0"> Let’s look at the most versatile operator of JavaScript, the plus operator. The plus operator in JavaScript is one of the most overloaded operators. It can add floating point numbers, add integer numbers as specialized in every engine, concatenate strings, convert an object into a string before concatenating a number to it, and even mutate the DOM. Yes, this is correct, JavaScript does not forbid you from making any side-effects in any of these functions.</span></p>
+
+            <p class="plus1">Anyhow, as you might guess, most of the time a plus operator is either summing numbers, or concatenating strings, but rarely both.  When compiling, we do not want to replicate the code of an addition each time an addition is present. Ideally we should only cherry-pick the pieces of code which are useful and discard the rest, but this is premature for a Simple JIT.</p>
+
+            <p><span class="ic0">There is a technique called Inline Caches or Trace Compilation. This technique is about generating code on-demand. Instead of compiling an entire function, which can be time consuming, we compile only the branches as they are requested.</span><span class="ic1"> Thus, if the first time we visit this code we detect a double addition, we will execute,</span><span class="ic2"> compile and simplify the code corresponding</span><span class="ic3"> to a double addition.</span><span class="ic4"> If after we detect a string concatenation, we will execute,</span><span class="ic5"> compile and simplify the branches dedicated</span><span class="ic6"> to string concatenation. However, we still need a fallback path to handle cases which are not yet generated.</span></p>
+
+            <p><span class="ic6"> But, how removing unused branches optimizes the execution speed?</span><span class="ic7"> When a CPU sees code, it tries to predict which branch is going to be executed. However branches are not equals in assembly code. One fall-through while the other one will discard a bit of the instruction pipeline. By moving away the unlikely code, we help the CPU at making the right choice by loading less instructions as branches are no longer interleaved.</span></p>
+
+            <!-- ·· <p>inline caches [pure] --></p>
+
+            <p class="ic7">The same principle applies to functions which have computations with immutable data. You can use inline caches as a way to recall a previous execution. For example, we have some C++ code which has non-observable side-effects and computes a value based on immutable inputs. We can replace this code by its result, by verifying that we have the same inputs.</p>
+
+            <p class="simple">Good news! We have reached what simple JIT compilers do as a compilation target. Which is to remove the dispatching cost of the interpreter, and use Inline Caches for code which has a lot of variations. This mode of compilation is what SpiderMonkey uses since 2013, and what the v8 team recently announced under the codename Sparkplug.</p>
+
+            <!-- · <p>Optimizing JITs (Crazy fast with more work) --></p>
+
+            <p class="simple">So far JITs are just warming up, but they are much more powerful than that. The optimizing JIT learns from what the simple JIT is doing. The simple JIT will generate Inline Caches each time a code path is necessary. The Optimizing JIT piggybacks on this acquired knowledge to specialize the code accordingly, based on the hypothesis that this is unlikely to change.</p>
+
+            <!-- <p>if needed: mention that optimizing JIT are scheduled after the simple JIT, when expectation of runtime suggest it might be worth the effort --></p>
+
+            <p><span class="bp1">If there is no entry in an Inline Cache, we can deduce that the branch, coded in JavaScript, is actually never used. For example, in a function from a JavaScript library, where a function is only used in a specific manner,</span><span class="bp2"> we can move away all corner cases which are never encountered. In SpiderMonkey this optimization is simply named Branch Pruning.</span></p>
+
+            <p class="spe">Inline Caches also provide valuable information when there is a single entry. When there is a single entry, then we can take the code compiled by the Inline Caches, and reuse it in our compilation graph.</p>
+
+            <p class="spe">For example, knowing that the previous instruction is an addition and not a concatenation removes the need to check whether we have a number as operand. While this one sounds trivial, there are many others with many other opportunities.</p>
+
+            <p class="spe">By specializing, we can do more optimizations such as constant propagations, folding consecutive operations, replacing object fields by stack variables, computing the range of math operations to use integer math when possible.</p>
+
+            <p><span class="uce1">Another optimization is the Unreachable Code Elimination, while it sounds similar to Branch Pruning it is actually complementary, as some code might be unreachable based on the parameters provided by the caller. So when inlining the code of one function in another,</span><span class="uce2"> we might discover that a branch can never be reached in this context, while it has been used in different contexts. Unreachable Code Elimination follows other optimizations such as constant folding and Range Analysis, which help pre-compute whether a condition is always evaluated true or false.</span></p>
+
+            <p class="deopt1">The optimizing JIT is making profile-guided-optimization, but it is much more capable than a static compiler at this task. When a static compiler performs profile-guided-optimization, it does not have the ability to remove anything, it just moves the code far away to hint the CPU that the code should not be loaded in its instruction cache.</p>
+
+            <p><span class="deopt1">An optimizing JIT keeps the condition and simply removes branches. The reason we can do that is because we have the option to resume the execution in the Simple JIT or in the interpreter.</span><span class="deopt2"> Resuming in a lower tier is called a deoptimization, and this is the Nemesis of optimizing JITs.</span></p>
+
+            <p class="deopt2">A deoptimization is quite complex, as the optimizing JIT is removed from the execution stack and replaced by what the frame of the simple JIT would look like. The locations of the variables of the optimizing JIT have to be mapped to the locations of the variables of the simple JIT. This On-Stack-Replacement is quite costly, not much because of it-self but because we have to wait in the simple JIT while the optimizing JIT is confident enough to re-compile.</p>
+
+
+            <!-- .. <p>Invalidation --></p>
+
+            <p class="inv1">So far, I only mentioned how JITs are cutting branches, but keeping the conditions. JITs do not have time to prove that all properties hold within the program. Moreover code could be added dynamically, invalidating any proof. Still, there is a trick which consists of moving the conditions to other functions which are producing the value which is checked.</p>
+
+            <p><span class="inv2">To understand how this works, we have to look at the data and from where it is coming from, such as a property read.</span><span class="inv3"> The optimizing JIT will move the condition out of the generated code to be executed in all sources of the data, such as the property setter. Thus, when the value is used in the optimized code, we know the condition holds.</span></p>
+
+            <p class="inv3">However, if the condition fails while setting the property, then the generated code is no longer valid, and if the invalid property value were to flow in the compiled code, it could miss-behave. The generated code has to be invalidated and discarded. A fuse is triggered and converts all edges into deoptimizations.</p>
+
+            <p class="inv3">Invalidating code, forces us to deoptimize and to resume the execution in the simple JIT, and wait for another compilation to resume our fastest running speed.</p>
+
+            <!-- · <p>Take away --></p>
+
+            <p class="optim">Ok, let’s summarize …</p>
+
+            <p class="optim">JITs are all about making trade-offs between compilation speed and the speed of the generated code. While there is a lot of logic in JIT compilers optimizations, their goal is to reduce the number of instructions to be executed in the functions which are executed the most frequently.</p>
+
+            <p class="optim">Removing branches is the most effective way to enable more optimization in a JIT, either by removing obvious overhead, by recording paths as they are needed, or by filtering branches when they are unused or unreachable.</p>
+
+            <p class="optim">As a JavaScript developer, your interest is not to remove all branches, but to make sure that where the performance is needed, that JIT compilers would have the ability to remove a maximum amount of branches. You can do so by reducing the number of types for each instruction and by making sure that branches can be removed when a function is inlined.</p>
+
+            <p class="optim">Also, nothing forbids you from making your own simple JIT in JavaScript.</p>
+
+        </article>
+        <object id="svg-slides" type="image/svg+xml" data="jit-principles.svg" width="100%"></object>
+        <script>
+         const layers = [
+             "White background",
+             "Plan",
+             "Compilation Timing 0_3",
+             "Compilation Timing 0_4",
+             "Compilation Timing 1_3",
+             "Compilation Timing 2_3",
+             "Timing Expectation 0_0",
+             "Timing Expectation 1_1",
+             "Timing Expectation 2_2",
+             "Timing Expectation 3_3",
+             "Timing Expectation 4_4",
+             "Timing Expectation 5_5",
+             "Vocabulary 0",
+             "Vocabulary 1",
+             "Vocabulary 1_1",
+             "Vocabulary 1_2",
+             "Vocabulary 1_3",
+             "Vocabulary 1_4",
+             "Vocabulary 2",
+             "Unrool Interpreter 1",
+             "Unrool Interpreter 2",
+             "Unrool Interpreter 3",
+             "Unrool Interpreter 3.1",
+             "Unrool Interpreter 4",
+             "Unrool Interpreter 4.1",
+             "Unrool Interpreter 5",
+             "Unrool Interpreter 5.1",
+             "Unrool Interpreter 6",
+             "Unrool Interpreter 6.1",
+             "Plus Operator",
+             "Plus Operator Code",
+             "Inline Cache Empty",
+             "Inline Cache Empty double-input",
+             "Inline Cache double-IC compile",
+             "Inline Cache double-IC",
+             "Inline Cache double-IC string-input",
+             "Inline Cache double-IC string-IC compile",
+             "Inline Cache double-IC string-IC",
+             "Inline Cache CPU prediction",
+             "Simple JIT summary",
+             "Branch Pruning - empty IC",
+             "Branch Pruning - empty IC cut",
+             "Type Specialization - double-IC",
+             "UCE",
+             "UCE cut",
+             "Deoptimization 1",
+             "Deoptimization 2",
+             "Invalidation 1",
+             "Invalidation 2",
+             "Invalidation 3",
+             "Optimizing JIT summary"
+         ];
+         // Map each slide index to the list of layers to be displayed.
+         const slide_to_layers = [
+             ["intro", "Title"],
+             ["plan", "Plan"],
+             ["timing1", "Compilation Timing 0_3", "Compilation Timing 0_4"],
+             ["timing2", "Compilation Timing 0_3", "Compilation Timing 1_3", "Compilation Timing 0_4"],
+             ["timing3", "Compilation Timing 0_3", "Compilation Timing 1_3", "Compilation Timing 2_3", "Compilation Timing 0_4"],
+             ["expect1", "Timing Expectation 1_1"],
+             ["expect2", "Timing Expectation 2_2"],
+             ["expect3", "Timing Expectation 3_3"],
+             ["expect4", "Timing Expectation 4_4"],
+             ["expect5", "Timing Expectation 5_5"],
+             ["vocab0", "Vocabulary 0"],
+             ["vocab1", "Vocabulary 1"],
+             ["vocab1.1", "Vocabulary 1_1"],
+             ["vocab1.2", "Vocabulary 1_2"],
+             ["vocab1.3", "Vocabulary 1_3"],
+             ["vocab1.4", "Vocabulary 1_4"],
+             ["vocab2", "Vocabulary 2"],
+             ["unrol1", "Unrool Interpreter 1"],
+             ["unrol2", "Unrool Interpreter 2", "Unrool Interpreter 1"],
+             ["unrol3", "Unrool Interpreter 3.1", "Unrool Interpreter 3", "Unrool Interpreter 2", "Unrool Interpreter 1"],
+             ["unrol4", "Unrool Interpreter 4.1", "Unrool Interpreter 4", "Unrool Interpreter 3", "Unrool Interpreter 2", "Unrool Interpreter 1"],
+             ["unrol5", "Unrool Interpreter 5.1", "Unrool Interpreter 5", "Unrool Interpreter 4", "Unrool Interpreter 3", "Unrool Interpreter 2", "Unrool Interpreter 1"],
+             ["unrol6", "Unrool Interpreter 6.1", "Unrool Interpreter 6", "Unrool Interpreter 5", "Unrool Interpreter 4", "Unrool Interpreter 3", "Unrool Interpreter 2", "Unrool Interpreter 1"],
+             ["unrol7", "Unrool Interpreter 6", "Unrool Interpreter 5", "Unrool Interpreter 4", "Unrool Interpreter 3", "Unrool Interpreter 2", "Unrool Interpreter 1"],
+             ["plus0", "Plus Operator"],
+             ["plus1", "Plus Operator Code"],
+             ["ic0", "Inline Cache Empty"],
+             ["ic1", "Inline Cache Empty double-input"],
+             ["ic2", "Inline Cache double-IC compile"],
+             ["ic3", "Inline Cache double-IC"],
+             ["ic4", "Inline Cache double-IC string-input"],
+             ["ic5", "Inline Cache double-IC string-IC compile"],
+             ["ic6", "Inline Cache double-IC string-IC"],
+             ["ic7", "Inline Cache CPU prediction"],
+             ["simple", "Simple JIT summary"],
+             ["bp1", "Branch Pruning - empty IC"],
+             ["bp2", "Branch Pruning - empty IC cut"],
+             ["spe", "Type Specialization - double-IC"],
+             ["uce1", "UCE"],
+             ["uce2", "UCE cut"],
+             ["deopt1", "Deoptimization 1"],
+             ["deopt2", "Deoptimization 2"],
+             ["inv1", "Invalidation 1"],
+             ["inv2", "Invalidation 2"],
+             ["inv3", "Invalidation 3"],
+             ["optim", "Optimizing JIT summary"]
+         ];
+
+
+         function SlideDeck() {
+             this.slide = 0;
+             this.prompt_text = [];
+             this.prompt_index = 0;
+             this.svg_slides = document.getElementById("svg-slides");
+             this.txt_slides = document.getElementById("txt-slides");
+             this.svg_layers_to_dom = null;
+             return this;
+         }
+
+         SlideDeck.prototype.fix_svg = function fix_svg() {
+             // For some reasons Inkscape 1.1 uses context-stroke for fill and stroke
+             // values of markers, which are used for arrow heads. Remove these if
+             // present.
+             for (let p of this.svg_slides.contentDocument.getElementsByTagName("path")) {
+                 if (p.style.markerEnd == "") continue;
+                 let id = p.style.markerEnd.slice(6, -2);
+                 let ps = this.svg_slides.contentDocument.getElementById(id).getElementsByTagName("path");
+                 for (let q of ps) {
+                     if (q.style.fill == "context-stroke")
+                         q.style.fill = p.style.stroke;
+                     if (q.style.stroke == "context-stroke")
+                         q.style.stroke = p.style.stroke;
+                 }
+             }
+         };
+
+         SlideDeck.prototype.init_dom_refs = function init_dom_refs() {
+             var o = {};
+             var gs = this.svg_slides.contentDocument.getElementsByTagName("g");
+             for (let g of gs) {
+                 if (g.getAttribute("inkscape:groupmode") == "layer")
+                     o[g.getAttribute("inkscape:label")] = g;
+             }
+             this.svg_layers_to_dom = o;
+         };
+
+         SlideDeck.prototype.set_slide = function set_slide(s, rel) {
+             if (!this.svg_layers_to_dom) {
+                 this.fix_svg();
+                 this.init_dom_refs();
+                 this.prompt_text = [...document.getElementsByClassName("emph")];
+             }
+             if (s === undefined) {
+                 this.prompt_text[this.prompt_index].classList.remove("emph");
+                 let p = this.prompt_index + rel;
+                 if (p >= this.prompt_text.length) s = this.slide + 1;
+                 else if (p < 0) s = this.slide - 1;
+                 else {
+                     this.prompt_index = p;
+                     let text = this.prompt_text[this.prompt_index];
+                     text.classList.add("emph");
+                     this.txt_slides.scrollTo({top: text.offsetTop, left: 0, behavior: 'smooth'});
+                     return;
+                 }
+                 this.prompt_text = [];
+             }
+             if (s >= slide_to_layers.length) s = slide_to_layers.length - 1;
+             if (s < 0) s = 0;
+             let next_slide = s;
+             for (let o of slide_to_layers[this.slide]) {
+                 let layer = this.svg_layers_to_dom[o];
+                 if (layer) {
+                     layer.style.display = "none";
+                 }
+             }
+             this.slide = next_slide;
+             console.log(...slide_to_layers[this.slide]);
+             for (let n of slide_to_layers[this.slide]) {
+                 let layer = this.svg_layers_to_dom[n];
+                 if (layer) {
+                     layer.style.display = "inline";
+                 } else {
+                     // TODO: if we have multiple text, we should concatenate.
+                     this.prompt_text = [...document.getElementsByClassName(n)];
+                     // TODO: if needed, sort by offsetTop.
+                 }
+             }
+             if (rel >= 0) {
+                 this.prompt_index = 0;
+             } else {
+                 this.prompt_index = this.prompt_text.length - 1;
+             }
+             let text = this.prompt_text[this.prompt_index];
+             text.classList.add("emph");
+             this.txt_slides.scrollTo({top: text.offsetTop, left: 0, behavior: 'smooth'});
+         };
+
+         let keys_for_navigation = true;
+         let sd = null;
+
+         function keydown (e) {
+             if (!sd) { return; }
+             if (!keys_for_navigation) { return; }
+             // Shortcut for alt, shift and meta keys
+             if (e.altKey || e.ctrlKey || e.metaKey) { return; }
+
+             switch (e.which) {
+                 case 116: // F5
+                 case 13: // Enter
+                     break;
+
+                 case 27: // Esc
+                     break;
+
+                 case 33: // PgUp
+                 case 38: // Up
+                 case 37: // Left
+                 case 72: // h
+                 case 75: // k
+                     e.preventDefault();
+                     sd.set_slide(undefined, -1);
+                     break;
+
+                 case 34: // PgDown
+                 case 40: // Down
+                 case 39: // Right
+                 case 76: // l
+                 case 74: // j
+                     e.preventDefault();
+                     sd.set_slide(undefined, 1);
+                     break;
+
+                 case 36: // Home
+                     e.preventDefault();
+                     sd.set_slide(0, 0);
+                     break;
+
+                 case 35: // End
+                     e.preventDefault();
+                     sd.set_slide(slides_to_layers.length - 1, -1);
+                     break;
+
+                 case 9: // Tab = +1; Shift + Tab = -1
+                 case 32: // Space = +1; Shift + Space = -1
+                     e.preventDefault();
+                     let diff = e.shiftKey ? -1 : 1;
+                     sd.set_slide(undefined, diff);
+                     break;
+                 default:
+                     // Behave as usual
+             }
+         }
+
+         (function () {
+             // Event handlers
+
+             window.addEventListener('DOMContentLoaded', function () {
+                 sd = new SlideDeck();
+                 //document.getElementById("svg-slides").contentWindow.addEventListener('DOMContentLoaded', function () {
+                 //}, false);
+             }, false);
+
+             document.addEventListener('keydown', keydown, false);
+
+             /*
+                document.addEventListener('click', dispatchSingleSlideMode, false);
+                document.addEventListener('touchend', dispatchSingleSlideMode, false);
+
+                document.addEventListener('touchstart', function (e) {
+                if (!isListMode()) {
+                var currentSlideNumber = getCurrentSlideNumber(),
+                x = e.touches[0].pageX;
+                if (x > window.innerWidth / 2) {
+                currentSlideNumber++;
+                } else {
+                currentSlideNumber--;
+                }
+
+                goToSlide(currentSlideNumber);
+                }
+                }, false);
+
+                document.addEventListener('touchmove', function (e) {
+                if (!isListMode()) {
+                e.preventDefault();
+                }
+                }, false);
+              */
+
+         }());
+        </script>
+    </body>
+</html>
