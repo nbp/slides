@@ -259,6 +259,20 @@
          }
 
          SlideDeck.prototype.fix_svg = function fix_svg() {
+             // svg_slides.contentDocument might error if reading from a local file, use
+             // `python -m SimpleHTTPServer` , or run `python ./server.py` to make the
+             // slides move in-sync with the text.
+             if (this.svg_slides.contentDocument == null) {
+                 alert(`
+This presentation does not work when used with the file:// protocole.
+Use "python -m SimpleHTTPServer" in the directory holding this presentation
+to serve it locally with an HTTP server.
+
+To sync the navigation across multiple computers,
+Use "python ./serve.py" to provide a WebSocket which will sync multiple computers navigation.
+                 `)
+             }
+
              // For some reasons Inkscape 1.1 uses context-stroke for fill and stroke
              // values of markers, which are used for arrow heads. Remove these if
              // present.
