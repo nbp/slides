@@ -84,7 +84,7 @@
 
             <p><span class="unrol7">Still, some opcodes need a lot of code.</span><span class="plus0"> Let’s look at the most versatile operator of JavaScript, the plus operator.</span><span class="plus0"> The plus operator in JavaScript is one of the most overloaded operators.</span><span class="plus0"> It can add floating point numbers, add integer numbers as specialized in every engine, concatenate strings, convert an object into a string before concatenating a number to it, and even mutate the DOM.</span><span class="plus0"> Yes, this is correct, JavaScript does not forbid you from making any side-effects in any of these functions.</span></p>
 
-            <p class="plus1">Anyhow, as you might guess, most of the time a plus operator is either summing numbers, or concatenating strings, but rarely both.  When compiling, we do not want to replicate the code of an addition each time an addition is present. Ideally we should only cherry-pick the pieces of code which are useful and discard the rest, but this is premature for a Simple JIT.</p>
+            <p class="plus1">Anyhow, as you might guess, most of the time a plus operator is either summing numbers, or concatenating strings, but rarely both. Ideally we should only cherry-pick the pieces of code which are useful and discard the rest, but this is premature for a Simple JIT.</p>
 
             <p><span class="ic0">There is a technique called Inline Caches or Trace Compilation. This technique is about generating code on-demand. Instead of compiling an entire function, which can be time consuming, we compile only the branches as they are requested.</span><span class="ic1"> Thus, if the first time we visit this code we detect a double addition, we will execute,</span><span class="ic2"> compile and simplify the code corresponding</span><span class="ic3"> to a double addition.</span><span class="ic4"> If after we detect a string concatenation, we will execute,</span><span class="ic5"> compile and simplify the branches dedicated</span><span class="ic6"> to string concatenation. However, we still need a fallback path to handle cases which are not yet generated.</span></p>
 
@@ -92,7 +92,7 @@
 
             <!-- ·· <p>inline caches [pure] --></p>
 
-            <p class="ic7">The same principle applies to functions which have computations with immutable data. You can use inline caches as a way to recall a previous execution. For example, we have some C++ code which has non-observable side-effects and computes a value based on immutable inputs. We can replace this code by its result, by verifying that we have the same inputs.</p>
+            <p class="ic7">Inline Caches are great for extracting the existing code, but are not restricted by it. One thing possible, when dealing with pure operations, is to use Inline Caches as a caching mechanism. When we have a complex function such as a property lookup, which is mostly pure, we can generate much simpler code. By specializing a property lookup for each object type, we can generate code which checks the object type, and right-away returns the location of the property.</p>
 
             <p class="simple">Good news! We have reached what simple JIT compilers do as a compilation target. Which is to remove the dispatching cost of the interpreter, and use Inline Caches for code which has a lot of variations. This mode of compilation is what SpiderMonkey uses since 2013, and what the v8 team recently announced under the codename Sparkplug.</p>
 
