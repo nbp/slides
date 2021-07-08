@@ -60,7 +60,7 @@
 
             <p class="timing2">If the JIT were to be eager, we would parse, then right away compile, such that all executions are fast.</span> As you might see, this is not always the fastest case, this depends on whether you prefer throughput over responsiveness and it depends on the number of times the function is expected to run.</p>
 
-            <p class="timing3">On a web page, a user expects a fast response or he will browse away. While on a server, the same code answers thousands of requests and the steady performance is more important. Thus, one might expect that you would have different heuristics and optimizations between a JavaScript engine used in a browser and a server.</p>
+            <p class="timing3">On a web page, users expect a fast response or they will browse away. While on a server, the same code answers thousands of requests and the steady performance is more important. Thus, one might expect that you would have different heuristics and optimizations between a JavaScript engine used in a browser and a server.</p>
 
             <p><span class="expect1">A simple heuristic, which is never implemented as cleanly in JavaScript engines,</span><span class="expect2"> is to guess the time the engine will spend executing each function.</span><span class="expect3"> If by compiling, the speed-up we gain compensate for the slow down of the compilation,</span><span class="expect4"> then scheduling a compilation is worth it, in terms of throughput.</span></p>
 
