@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="author" value="Nicolas B. Pierron" />
+  <title>Simulation of Mould Effect</title>
+</head>
+<body>
+  <canvas id="paint" width="800" height="600"></canvas>
+  <script>
+    // Number of masses.
+    var num = 10000;
+    // Mass of each masses. (radius is only used for display)
+    var mass = 1, mass_r = 1;
+    // Spring default distance, and recall force.
+    var dist_0 = 5, k = 10;
+    // Gravity
+    var g = -10;
+    // How high is the table, no more acceleration after.
+    var height = 1000;
+
+    // The wall is emulated as circle centered on (0,0).
+    var wall_r = 10;
+    var wall_touched = false;
+
+    // x,y positions of masses.
+    var pos = new Array(2 * num);
+    // vx,vy velocity of masses.
+    var vel = new Array(2 * num);
+    // ax,ay accelerations of masses.
+    var acc = new Array(2 * num);
+    // delta of time between each simulation step.
+    var dt = 0.01;
+
+    // Display information.
+    var y0 = 400;
+    var x0 = 550;
+    var scale = 4;
+
+    function step() {
+      wall_touched = false;
+      // No need to consider any movement after this index.
+      var moving_max = 2 * num;
+
+      // Apply gravity.
+      for (var i = 0; i < moving_max; i += 2) {
+        acc[i] = 0;
+        acc[i + 1] = 0;
+        if (pos[i] < -height) continue;
+        acc[i + 1] = mass * g;
+      }
+
+      // Compute spring forces between adjacent masses.
+      for (var i = 0; i < moving_max - 2; i += 2) {
+        var dx = -pos[i], dy = -pos[i + 1];
+        dx += pos[i + 2]; dy += pos[i + 3];
+        var dist = Math.hypot(dx, dy);
+        var rel_dist = dist - dist_0;
+        // Skip tiny differences. (does not change much the simulation)
+        if (rel_dist < 0.01) continue;
+        var tension = - rel_dist * k;
+        dist = Math.min(0.1, dist); // Avoid dividing by 0 even if this is not real physique
+        dx /= dist;
+        dy /= dist;
+        // Apply tension on both ends of the spring.
+        acc[i] -= dx * tension;
+        acc[i + 1] -= dy * tension;
+        acc[i + 2] += dx * tension;
+        acc[i + 3] += dy * tension;
+      }
+
+      // Cancel downward acceleration on the pile of masses as well as on ground.
+      for (var i = 0; i < moving_max; i += 2) {
+        // masses in the stock pile are in equilibrium, no downward acceleration caused by gravity.
+        if (pos[i] < 0 && pos[i + 1] < mass_r && pos[i + 1] > -wall_r) {
+          acc[i + 1] = Math.max(acc[i + 1], 0);
+          vel[i + 1] = Math.abs(vel[i + 1]);
+        }
+        if (pos[i + 1] < -height) {
+          acc[i + 1] = 0;
+          vel[i + 1] = Math.abs(vel[i + 1]);
+        }
+      }
+
+      // Apply accelerations and velocities.
+      for (var i = 0; i < moving_max; i++) {
+        vel[i] += acc[i] * dt;
+        pos[i] += vel[i] * dt;
+      }
+
+      // Compute ball bouncing off the wall.
+      for (var i = 0; i < moving_max; i += 2) {
+        var dx = pos[i], dy = pos[i + 1];
+        var dist = Math.hypot(dx, dy);
+        if (dist > wall_r) continue;
+        dx /= dist;
+        dy /= dist;
+        var vx = vel[i], vy = vel[i + 1];
+        var v = Math.hypot(vx, vy);
+        var vr = vx * dx + vy * dy;
+        // Only reverse velocity going inward.
+        if (vr > 0) continue;
+
+        if (pos[i] < 0 && pos[i + 1] < mass_r && pos[i + 1] > -mass_r) {
+          // don't count bounces in the stock pile.
+        } else {
+          wall_touched = true;
+        }
+        // TODO: loose velocity by using a value between 1 and 2.
+        vr *= 2;
+        vel[i] -= dx * vr;
+        vel[i + 1] -= dy * vr;
+      }
+    }
+
+    function init() {
+      // Initialize the setup as rectangle above the border of the wall.
+      var s = - dist_0, px = 5 * wall_r, py = 0;
+      var i = 0;
+      for (var py = 0; py < 2 * wall_r; py += dist_0, i += 2) {
+        pos[i] = px;
+        pos[i + 1] = py;
+        vel[i] = 0;
+        vel[i + 1] = 0;
+        acc[i] = 0;
+        acc[i + 1] = 0;
+      }
+      for (; px > - 2 * wall_r; px -= dist_0, i += 2) {
+        pos[i] = px;
+        pos[i + 1] = py;
+        vel[i] = 0;
+        vel[i + 1] = 0;
+        acc[i] = 0;
+        acc[i + 1] = 0;
+      }
+      for (; py > dist_0 / 2; py -= dist_0, i += 2) {
+        pos[i] = px;
+        pos[i + 1] = py;
+        vel[i] = 0;
+        vel[i + 1] = 0;
+        acc[i] = 0;
+        acc[i + 1] = 0;
+      }
+
+      // Overlapping stock pile.
+      for (; i < 2 * num; i+= 2) {
+        pos[i] = px;
+        if (px + s <= -5 * dist_0 - 2 * wall_r) s *= -1;
+        if (px + s >= -2 * wall_r) s *= -1;
+        px += s;
+
+        pos[i + 1] = 0;
+        vel[i] = 0;
+        vel[i + 1] = 0;
+        acc[i] = 0;
+        acc[i + 1] = 0;
+      }
+    }
+
+    function display() {
+      var paint = document.getElementById("paint");
+      var ctx = paint.getContext('2d');
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fillRect(0, 0, 800, 600);
+
+      ctx.fillStyle = wall_touched ? 'red' : 'rgba(0, 0, 255, 0.1)';
+      ctx.beginPath();
+      ctx.arc(x0, y0, scale * wall_r, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.fillStyle = 'black';
+      for (var i = 0; i < 2 * num; i += 2) {
+        ctx.beginPath();
+        ctx.arc(scale * pos[i] + x0, scale * -pos[i + 1] + y0, scale * mass_r, 0, 2 * Math.PI);
+        ctx.fill();
+        if (i < 2 * num - 2) {
+          ctx.beginPath();
+          ctx.moveTo(scale * pos[i] + x0, scale * -pos[i + 1] + y0);
+          ctx.lineTo(scale * pos[i + 2] + x0, scale * -pos[i + 3] + y0);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function update() {
+      step();
+      display();
+      window.requestAnimationFrame(update);
+    }
+
+    init();
+    display();
+    update();
+  </script>
+</body>
+</html>
