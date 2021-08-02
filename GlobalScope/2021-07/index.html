@@ -19,9 +19,19 @@
              overflow: hidden;
              margin: 0;
          }
+         @media (orientation:portrait) {
+             body {
+                 flex-flow: column-reverse nowrap;
+                 height: 100vh;
+             }
+         }
+
 
          .side-by-side > * {
              flex: 0 1 45%;
+         }
+         @media (orientation:portrait) {
+             .side-by-side > * { flex: 0 1 auto; }
          }
 
          .only-slides > * {
@@ -33,9 +43,14 @@
 
          #txt-slides {
              color: #555;
-             font-size: 50px;
+             font-size: calc(100vw/60);
              overflow: hidden;
              height: 100vh;
+         }
+         @media (orientation:portrait) {
+             #txt-slides {
+                 font-size: calc(100vw/20);
+             }
          }
 
          #svg-slides {
@@ -319,7 +334,13 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
              this.svg_layers_to_dom = o;
          };
 
-         let shiftTop = 400;
+         let shiftTop = 0;
+         function updateShiftTop() {
+             let text = document.getElementById("txt-slides");
+             shiftTop = text.clientHeight / 3 + text.offsetTop;
+         }
+         window.onresize = updateShiftTop;
+
          SlideDeck.prototype.set_absolute_slide = function set_absolute_slide(s, p) {
              if (this.slide == s && this.prompt_index == p) return;
              this.prompt_text[this.prompt_index].classList.remove("emph");
@@ -353,6 +374,7 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
              }
              let text = this.prompt_text[this.prompt_index];
              text.classList.add("emph");
+             updateShiftTop();
              this.txt_slides.scrollTo({top: text.offsetTop - shiftTop, left: 0, behavior: 'smooth'});
          }
 
