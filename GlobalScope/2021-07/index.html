@@ -341,7 +341,18 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
          }
          window.onresize = updateShiftTop;
 
-         SlideDeck.prototype.set_absolute_slide = function set_absolute_slide(s, p) {
+         SlideDeck.prototype.set_absolute_slide = function set_absolute_slide(s, p, ref) {
+             if (!this.svg_layers_to_dom) return;
+             if (ref) {
+                 let classList;
+                 if (typeof ref === "string") {
+                     classList = [ ref.split(",")[0] ];
+                 } else {
+                     classList = ref.classList;
+                 }
+                 s = this.classList_to_slide(classList);
+                 if (s === undefined) return;
+             }
              if (this.slide == s && this.prompt_index == p) return;
              this.prompt_text[this.prompt_index].classList.remove("emph");
 
@@ -367,6 +378,20 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
                  }
              }
 
+             if (ref) {
+                 p = 0;
+                 if (typeof ref == "string") {
+                     p = ref.split(",")[1] | 0;
+                 } else {
+                     for (let p_try = 0; p_try < this.prompt_text.length; p_try++) {
+                         if (this.prompt_text[p_try] === ref) {
+                             p = p_try;
+                             break;
+                         }
+                     }
+                 }
+             }
+
              if (p >= 0) {
                  this.prompt_index = p;
              } else {
@@ -376,6 +401,7 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
              text.classList.add("emph");
              updateShiftTop();
              this.txt_slides.scrollTo({top: text.offsetTop - shiftTop, left: 0, behavior: 'smooth'});
+             document.location.hash = slide_to_layers[this.slide][0] + "," + this.prompt_index;
          }
 
          SlideDeck.prototype.init = function init() {
@@ -384,6 +410,10 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
                  this.init_dom_refs();
                  this.split_prompter();
                  this.prompt_text = [...document.getElementsByClassName(slide_to_layers[0][0])];
+                 if (document.location.hash) {
+                     let ref = document.location.hash.slice(1);
+                     this.set_absolute_slide(undefined, undefined, ref);
+                 }
              }
          }
 
@@ -411,6 +441,17 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
                  sock.send(`[${[s, p]}]`);
              }
              this.set_absolute_slide(s, p);
+         };
+
+         SlideDeck.prototype.classList_to_slide = function classList_to_slide(cl) {
+             for (c of cl) {
+                 for (let i = 0; i < slide_to_layers.length; i++) {
+                     if (slide_to_layers[i][0] == c) {
+                         return i;
+                     }
+                 }
+             }
+             return undefined;
          };
 
          let keys_for_navigation = true;
@@ -481,6 +522,7 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
              window.addEventListener('DOMContentLoaded', function () {
                  sd = new SlideDeck();
                  sock = new WebSocket('ws://' + window.location.host + '/ws');
+                 sd.svg_slides.onload = () => { sd.init() };
 
                  function sendMessage(){
                      sock.send(msg.val());
@@ -493,7 +535,6 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
                  // income message handler
                  sock.onmessage = function(event) {
                      // dispatch [s, p] values to set_absolute_slide function.
-                     sd.init();
                      sd.set_absolute_slide(...JSON.parse(event.data));
                  };
 
@@ -510,33 +551,51 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
                  }
              }, false);
 
+             // React to keyboard events.
              document.addEventListener('keydown', keydown, false);
 
-             /*
-                document.addEventListener('click', dispatchSingleSlideMode, false);
-                document.addEventListener('touchend', dispatchSingleSlideMode, false);
+             // React to wheel events to scroll.
+             document.onwheel = (function onwheel(e) {
+                 if (event.deltaY < 0) {
+                     e.preventDefault();
+                     sd.set_slide(undefined, -1);
+                 } else {
+                     e.preventDefault();
+                     sd.set_slide(undefined, 1);
+                 }
+             });
 
-                document.addEventListener('touchstart', function (e) {
-                if (!isListMode()) {
-                var currentSlideNumber = getCurrentSlideNumber(),
-                x = e.touches[0].pageX;
-                if (x > window.innerWidth / 2) {
-                currentSlideNumber++;
-                } else {
-                currentSlideNumber--;
-                }
+             // React to click on text section, to scroll to the associated
+             // slide.
+             document.onclick = (function onclick(e) {
+                 e.preventDefault();
+                 sd.set_absolute_slide(undefined, undefined, e.target);
+             });
 
-                goToSlide(currentSlideNumber);
-                }
-                }, false);
-
-                document.addEventListener('touchmove', function (e) {
-                if (!isListMode()) {
-                e.preventDefault();
-                }
-                }, false);
-              */
-
+             // React to touch mouvements, and convert that to slide changes.
+             let touch_pos = { x: 0, y: 0 };
+             document.ontouchstart = (function (e) {
+                 e.preventDefault();
+                 touch_pos.y = e.changedTouches[0].pageY;
+             });
+             document.ontouchmove = (function (e) {
+                 e.preventDefault();
+             });
+             document.ontouchend = (function (e) {
+                 e.preventDefault();
+                 touch_pos.y = e.changedTouches[0].pageY - touch_pos.y;
+                 if (touch_pos.y > 0) {
+                     while (touch_pos.y > 0) {
+                         sd.set_slide(undefined, -1);
+                         touch_pos.y -= 100;
+                     }
+                 } else {
+                     while (touch_pos.y <= 0) {
+                         sd.set_slide(undefined, 1);
+                         touch_pos.y += 100;
+                     }
+                 }
+             });
          }());
         </script>
     </body>
