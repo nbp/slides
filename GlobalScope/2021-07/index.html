@@ -556,12 +556,15 @@ Use "python ./serve.py" to provide a WebSocket which will sync multiple computer
              document.addEventListener('keydown', keydown, false);
 
              // React to wheel events to scroll.
+             let inhibit = 0;
              document.onwheel = (function onwheel(e) {
+                 e.preventDefault();
+                 if (inhibit) return;
+                 inhibit +=1;
+                 setTimeout((() => { inhibit -= 1 }), 100);
                  if (event.deltaY < 0) {
-                     e.preventDefault();
                      sd.set_slide(undefined, -1);
                  } else {
-                     e.preventDefault();
                      sd.set_slide(undefined, 1);
                  }
              });
